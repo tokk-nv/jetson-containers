@@ -1,7 +1,7 @@
 #---
 # name: jupyter_clickable_image_widget
 # group: jet
-# depends: [jupyterlab]
+# depends: [jupyterlab_v2]
 # notes: https://github.com/jaybdub/jupyter_clickable_image_widget
 #---
 ARG BASE_IMAGE
@@ -20,7 +20,7 @@ RUN echo -e "\e[48;5;172m Install traitlets \e[0m"
 RUN python3 -m pip install git+https://github.com/ipython/traitlets@main
 # Install dependencies for jupyter_clickable_image_widget
 RUN echo "\e[42m Install dependencies \e[0m"
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - 
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
             libssl-dev \
