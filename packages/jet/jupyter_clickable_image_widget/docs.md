@@ -21,6 +21,7 @@ git checkout tags/v0.1
 pip3 install -e .
 jupyter labextension install js
 jupyter lab build
+cd /
 jupyter lab --ip 0.0.0.0 --port 8888 --allow-root
 ```
 
