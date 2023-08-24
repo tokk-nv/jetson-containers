@@ -7,7 +7,7 @@
 To launch the container, run the command below, and then navigate your browser to `http://HOSTNAME:8888`
 
 ```bash
-./run.sh $(./autotag jetracer)
+./run.sh $(./autotag jetracer) --privileged 
 ```
 
 ### Hardware setup
