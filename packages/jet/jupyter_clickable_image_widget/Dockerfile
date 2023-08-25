@@ -31,6 +31,48 @@ RUN echo "\e[42m Install jupyter_clickable_image_widget \e[0m"
 RUN git clone https://github.com/jaybdub/jupyter_clickable_image_widget && \
     cd jupyter_clickable_image_widget && \
     git checkout tags/v0.1 && \
-    pip3 install -e . && \
+    pip3 install . && \
     jupyter labextension install js && \
     jupyter lab build
+
+RUN pip3 install 'ipywidgets<8'
+
+# {
+#   "name": "jupyter_clickable_image_widget",
+#   "version": "0.1.0",
+#   "description": "A Custom Jupyter Widget Library",
+#   "author": "John Welsh",
+#   "main": "lib/index.js",
+#   "repository": {
+#     "type": "git",
+#     "url": "https://github.com//jupyter_clickable_image_widget.git"
+#   },
+#   "keywords": [
+#     "jupyter",
+#     "widgets",
+#     "ipython",
+#     "ipywidgets",
+#     "jupyterlab-extension"
+#   ],
+#   "files": [
+#     "lib/**/*.js",
+#     "dist/*.js"
+#   ],
+#   "scripts": {
+#     "clean": "rimraf dist/",
+#     "prepublish": "webpack",
+#     "build": "webpack",
+#     "watch": "webpack --watch --mode=development",
+#     "test": "echo \"Error: no test specified\" && exit 1"
+#   },
+#   "devDependencies": {
+#     "webpack": "^3.5.5",
+#     "rimraf": "^2.6.1"
+#   },
+#   "dependencies": {
+#     "@jupyter-widgets/base": "^1.1 || ^2 || ^3 || ^4 || ^6"
+#   },
+#   "jupyterlab": {
+#     "extension": "lib/labplugin"
+#   }
+# }

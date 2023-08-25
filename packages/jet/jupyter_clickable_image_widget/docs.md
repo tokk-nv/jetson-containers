@@ -1,32 +1,27 @@
 > This container has a default run command that will automatically start the Jupyter Lab.
 
-## Necessary work-around
+## How to use
 
-Once starting the `jupyter_clickable_image_widget` container, kill Jupyter Lab process, and install everything again, then start Jupyter Lab server again.
+Open your browser, and access `http://<IP_ADDRESS>:8888`.
 
-```
-ps
-kill 24 # kill the process that is executing `jupyter lab`
-python3 -m pip install git+https://github.com/ipython/traitlets@main
-curl -fsSL https://deb.nodesource.com/setup_16.x | bash - 
-apt-get update && \
-    apt-get install -y --no-install-recommends \
-            libssl-dev \
-            nodejs && \
-    rm -rf /var/lib/apt/lists/* && \
-    apt-get clean
-jupyter labextension install @jupyter-widgets/jupyterlab-manager
-cd /jupyter_clickable_image_widget
-git checkout tags/v0.1
-pip3 install -e .
-jupyter labextension install js
-jupyter lab build
-cd /
-jupyter lab --ip 0.0.0.0 --port 8888 --allow-root
-```
+## How to test
 
-Then open a new Jupyter notebook, and run the following code.
+Open a new Jupyter notebook, and run the following code.
 
 ```
 from jupyter_clickable_image_widget import ClickableImageWidget
+image_widget = ClickableImageWidget()
+def on_message(_, content, ignore):
+    if content['event'] == 'click':
+        data = content['eventData']
+        alt_key = data['altKey']
+        ctrl_key = data['ctrlKey']
+        shift_key = data['shiftKey']
+        x = data['offsetX']
+        y = data['offsetY']
+image_widget.on_msg(on_message)
+file = open("apple3.jpg", "rb")
+image = file.read()
+image_widget.value = image
+display(image_widget)
 ```
