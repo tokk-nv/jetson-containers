@@ -3,6 +3,7 @@
 import sys
 import ssl
 import time
+import copy
 import json
 import flask
 import queue
@@ -21,19 +22,17 @@ class Webserver(threading.Thread):
     """
     Flask + websockets server for the chat interface
     """
-    def __init__(self, web_server='0.0.0.0', web_port=8050, ws_port=49000, ssl_cert=None, ssl_key=None, 
-                 text_callback=None, audio_callback=None, **kwargs):
+    def __init__(self, web_server='0.0.0.0', web_port=8050, ws_port=49000, 
+                 ssl_cert=None, ssl_key=None, client_callback=None, msg_callback=None, **kwargs):
                  
         super(Webserver, self).__init__(daemon=True)  # stop thread on main() exit
         
         self.host = web_server
         self.port = web_port
-        
-        self.text_callback = text_callback
-        self.audio_callback = audio_callback
-        
+
         self.msg_count_rx = 0
         self.msg_count_tx = 0
+        self.msg_callback = msg_callback
         
         # SSL / HTTPS
         self.ssl_key = ssl_key
@@ -62,9 +61,6 @@ class Webserver(threading.Thread):
     def on_websocket(self, websocket):
         print(f"-- new websocket connection from {websocket.remote_address}")
 
-        listener_thread = threading.Thread(target=self.websocket_listener, args=[websocket], daemon=True)
-        listener_thread.start()
- 
         # empty the queue from before the connection was made
         # (otherwise client will be flooded with old messages)
         # TODO implement self.connected so the ws_queue doesn't grow so large without webclient connected...
@@ -73,7 +69,13 @@ class Webserver(threading.Thread):
                 self.ws_queue.get(block=False)
             except queue.Empty:
                 break
+        
+        if self.msg_callback:
+            self.msg_callback({'client_state': 'connected'}, 0, int(time.time()*1000))
             
+        listener_thread = threading.Thread(target=self.websocket_listener, args=[websocket], daemon=True)
+        listener_thread.start()
+
         while True:
             websocket.send(self.ws_queue.get()) #json.dumps(self.ws_queue.get()))
 
@@ -84,29 +86,77 @@ class Webserver(threading.Thread):
         #wav.setnchannels(1)
         #wav.setsampwidth(2)
         #wav.setframerate(48000)
+        
+        header_size = 32
             
         while True:
             msg = websocket.recv()
-            msg = json.loads(msg)
             
-            if msg['type'] == 'audio':
-                #print(f"recieved audio:  size={msg['size']}")
-                #print(msg['settings']);
-                msg['data'] = base64.b64decode(msg['data'])
-                if len(msg['data']) != msg['size']:
-                    raise RuntimeError(f"web audio chunk had length={len(msg['data'])}  (expected={msg['size']})")
-                #wav.writeframesraw(msg['data'])
-                #wav.writeframes(msg['data'])
-                if self.audio_callback:
-                    self.audio_callback(msg)
+            if isinstance(msg, str):
+                print(f"-- recieved text-mode websocket message: {msg}")
+                continue
+                
+            if len(msg) <= header_size:
+                print(f"-- recieved invalid websocket message (size={len(msg)})")
+                continue
+                
+            msg_id, timestamp, magic_number, msg_type, payload_size, _, _ = \
+                struct.unpack_from('!QQHHIII', msg)
+                
+            if magic_number != 42:
+                print(f"-- recieved invalid websocket message (magic_number={magic_number} size={len(msg)})")
+                continue
+
+            if msg_id != self.msg_count_rx:
+                print(f"-- warning:  recieved websocket message with out-of-order ID {msg_id}  (last={self.msg_count_rx})")
+                self.msg_count_rx = msg_id
+                
+            self.msg_count_rx += 1
+            msgPayloadSize = len(msg) - header_size
+            
+            if payload_size != msgPayloadSize:
+                print(f"-- recieved invalid websocket msg (payload_size={payload_size} actual={msgPayloadSize}");
+            
+            #print(f"-- recieved websocket msg (id={msg_id} type={msg_type} timestamp={timestamp} payload_size={payload_size})")
+            
+            payload = msg[header_size:]
+            
+            if msg_type == 0:  # json
+                payload = json.loads(payload)
+                print("-- json websocket message:", payload)
+            elif msg_type == 1:  # text
+                payload = payload.decode('utf-8')
+                print("-- text websocket message:", payload)
+
+            if self.msg_callback:
+                self.msg_callback(payload, msg_type, timestamp)
     
-    def send_message(self, payload, type, timestamp=None):
+    def send_message(self, payload, type=None, timestamp=None):
         if timestamp is None:
             timestamp = time.time() * 1000
-          
-        if not isinstance(payload, bytes):
-            payload = bytes(payload)
+         
+        encoding = None
+        
+        if type is None:
+            if isinstance(payload, str):
+                type = 1
+                encoding = 'utf-8'
+            elif isinstance(payload, bytes):
+                type = 2
+            else:
+                type = 0
+                encoding = 'ascii'
+                
+        if type == 0 and not isinstance(payload, str):  # json.dumps() might have already been called
+            #print('sending JSON', payload)
+            payload = json.dumps(payload)
             
+        if not isinstance(payload, bytes):
+            if encoding is not None:
+                payload = bytes(payload, encoding=encoding)
+            else:
+                payload = bytes(payload)
+                
         # do we even need this queue at all and can the websocket just send straight away?
         self.ws_queue.put(b''.join([
             #
@@ -115,7 +165,7 @@ class Webserver(threading.Thread):
             #   0   uint64  message_id    (message_count_tx)
             #   8   uint64  timestamp     (milliseconds since Unix epoch)
             #   16  uint16  magic_number  (42)
-            #   18  uint16  message_type  (1=text, 2=audio)
+            #   18  uint16  message_type  (0=json, 1=text, >=2 binary)
             #   20  uint32  payload_size  (in bytes)
             #   24  uint32  unused        (padding)
             #   28  uint32  unused        (padding)
@@ -129,15 +179,22 @@ class Webserver(threading.Thread):
             ),
             payload
         ]))
- 
+
         self.msg_count_tx += 1
+     
+    def send_chat_history(self, history):
+        history = copy.deepcopy(history)
         
-    def output_audio(self, samples):
-        #self.send_message({
-        #    'type': 'audio',
-        #    'data': samples.tolist()
-        #})
-        self.send_message(samples, 2)
+        def translate_web(text):
+            text = text.replace('\n', '<br/>')
+            return text
+            
+        for n in range(len(history)):
+            for m in range(len(history[n])):
+                history[n][m] = translate_web(history[n][m])
+                
+        #print("-- sending chat history", history)
+        self.send_message({'chat_history': history})
         
     def run(self):
         print(f"-- starting webserver @ {self.host}:{self.port}")

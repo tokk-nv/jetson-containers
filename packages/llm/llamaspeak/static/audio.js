@@ -1,6 +1,6 @@
 /*
  * handles audio input/output device streaming
- * websocket.js should be included before this
+ * websocket.js should be included also
  */
 
 var audioContext;       // AudioContext
@@ -9,6 +9,7 @@ var audioInputDevice;   // MediaStream
 var audioInputStream;   // MediaStreamAudioSourceNode
 var audioInputCapture;  // AudioWorkletNode
 var audioOutputWorker;  // AudioWorkletNode
+var audioOutputMuted = false;
 
 //var audioMicRecorder;
 
@@ -69,6 +70,8 @@ function openAudioDevices(inputDeviceId, outputDeviceId) {
 		audioInputTrack = stream.getAudioTracks()[0];
 	  audioSettings = audioInputTrack.getSettings();
 		
+		audioInputTrack.enabled = false;  // mute the mic by default
+		
 		console.log(audioInputTrack);
 		console.log(audioSettings);
 		
@@ -99,11 +102,17 @@ function openAudioDevices(inputDeviceId, outputDeviceId) {
 }
 
 function onAudioInputCapture(event) {
-	msg = event.data;
+
+	if( audioInputTrack.enabled )  // unmuted
+		sendWebsocket(event.data, type=2);  // event.data is a Uint16Array
+	
+  //console.log('onAudioInputCapture()', event.data);
+	
+  /*msg = event.data;
 	
 	if( msg['type'] != 'audio' )
 		return;
-
+	
 	// encode to base64
 	var reader = new FileReader();
 	reader.readAsDataURL(new Blob([msg['data']]));
@@ -116,11 +125,11 @@ function onAudioInputCapture(event) {
 				'settings': audioInputTrack.getSettings(),
 			});
 		websocket.send(json);
-	};
+	};*/
 }
 
 function onAudioOutput(samples) {
-	if( audioOutputWorker != undefined ) {
+	if( audioOutputWorker != undefined && !audioOutputMuted ) {
 		int16Array = new Int16Array(samples);
 		audioOutputWorker.port.postMessage(int16Array, [int16Array.buffer]);
 	}
@@ -144,3 +153,26 @@ function onAudioOutput(samples) {
 		websocket.send(json);
 	};
 }*/
+
+function muteAudioInput() {  
+	var button = document.getElementById('audio-input-mute');
+	const muted = button.classList.contains('bi-mic-fill');
+	console.log(`muteAudioInput(${muted})`);
+	if( muted )
+		button.classList.replace('bi-mic-fill', 'bi-mic-mute-fill');
+	else
+		button.classList.replace('bi-mic-mute-fill', 'bi-mic-fill');
+	if( audioInputTrack != undefined )
+		audioInputTrack.enabled = !muted;
+}
+
+function muteAudioOutput() {  
+	var button = document.getElementById('audio-output-mute');
+	const muted = button.classList.contains('bi-volume-up-fill');
+	console.log(`muteAudioOutput(${muted})`);
+	if( muted )
+		button.classList.replace('bi-volume-up-fill', 'bi-volume-mute-fill');
+	else
+		button.classList.replace('bi-volume-mute-fill', 'bi-volume-up-fill');
+	audioOutputMuted = muted;
+}

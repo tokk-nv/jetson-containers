@@ -21,6 +21,7 @@ from llm import LLM
 
 from audio import AudioMixer
 from webserver import Webserver
+from tegrastats import Tegrastats
 
 
 def parse_args():
@@ -82,13 +83,15 @@ class Chatbot(threading.Thread):
         self.tts = TTS(self.auth, **vars(args))
         self.llm = LLM(**vars(args))
         
-        self.webserver = Webserver(audio_callback=self.on_web_audio, **vars(args))
+        self.webserver = Webserver(msg_callback=self.on_websocket_msg, **vars(args))
+        self.tegrastats = Tegrastats(callback=self.on_tegrastats, **vars(args))
         self.audio_mixer = AudioMixer(callback=self.on_mixed_audio, **vars(args))
 
         self.asr_history = ""
         self.tts_history = ""
-        self.llm_history = {'internal': [], 'visible': []}
+        self.llm_history = LLM.create_new_history()
         
+        self.llm_timer = None
         self.tts_track = None
         self.last_sigint = 0.0
         
@@ -126,19 +129,38 @@ class Chatbot(threading.Thread):
                 print("-- Ctrl+C:  exiting...")
                 sys.exit(0)
                 time.sleep(0.5)
-
-    def on_web_audio(self, msg):
-        """
-        Recieve audio samples from web client microphone
-        """
-        self.asr.process(msg['data'])
     
+    def on_websocket_msg(self, msg, type, timestamp):
+        """
+        Recieve websocket message from client
+        """
+        if type == 0:  # JSON
+            if 'chat_history_reset' in msg:
+                self.llm_history = LLM.create_new_history()
+                self.webserver.send_chat_history(self.llm_history['internal'])
+            if 'client_state' in msg:
+                if msg['client_state'] == 'connected':
+                    threading.Timer(1.0, lambda: self.webserver.send_chat_history(self.llm_history['internal'])).start()
+            if 'tts_voice' in msg:
+                self.tts.voice = msg['tts_voice']
+        elif type == 1:  # text (chat input)
+            self.on_llm_prompt(msg)
+        elif type == 2:  # web audio (mic)
+            self.asr.process(msg)
+    
+    def on_tegrastats(self, stats):
+        """
+        Recieve update system stats
+        """
+        self.webserver.send_message({'tegrastats': stats['summary']})
+        print("-- tegrastats ", stats['summary'])
+        
     def on_mixed_audio(self, audio, silent):
         """
         Send mixed-down audio from the TTS/ect to web client
         """
         if not silent:
-            self.webserver.output_audio(audio)
+            self.webserver.send_message(audio, type=2)
             
     def on_asr_transcript(self, result):
         """
@@ -150,29 +172,72 @@ class Chatbot(threading.Thread):
             confidence = result.alternatives[0].confidence
             print(f"## {transcript} ({confidence})")
             if confidence > -2.0: #len(transcript.split(' ')) > 1:
-                self.mute() # intterupt any bot output
-                self.llm.generate_chat(transcript, self.llm_history, max_new_tokens=self.args.max_new_tokens, callback=self.on_llm_reply)
+                self.asr_history = transcript
+                self.on_llm_prompt(transcript)
+            else:
+                self.webserver.send_chat_history(self.llm_history['internal']) # drop the rejected ASR from the client
         else:
             if transcript != self.asr_history:
-                print(f">> {transcript}")   
                 self.asr_history = transcript
+                print(f">> {transcript}") 
+                
                 if len(self.asr_history.split(' ')) >= 3:
                     self.mute()
+                    
+                web_history = LLM.add_prompt_history(self.llm_history, transcript) # show streaming ASR on the client
+                self.webserver.send_chat_history(web_history)
+                
+                threading.Timer(1.5, self.on_asr_waiting, args=[self.asr_history]).start()
+    
+    def on_asr_waiting(self, transcript):
+        """
+        If the ASR partial transcript has stagnated and not "gone final", then it was probably a misque and hsould be dropped
+        """
+        if self.asr_history == transcript:  # if the partial transcript hasn't changed, probably a misrecognized sound or echo
+            self.asr_history = ""
+            self.webserver.send_chat_history(self.llm_history['internal']) # drop the rejected ASR from the client
+
+    def on_llm_prompt(self, prompt):
+        """
+        Send the LLM the next chat message) from the user
+        """
+        self.mute()  # interrupt any ongoing bot output
+        self.audio_mixer.play(tone={'note': 'C', 'duration': 0.25, 'attack': 0.05, 'amplitude': 0.5})
+        self.llm.generate_chat(prompt, self.llm_history, max_new_tokens=self.args.max_new_tokens, callback=self.on_llm_reply)
+
+        web_history = LLM.add_prompt_history(self.llm_history, prompt) # show prompt on the client before reply is ready
+        self.webserver.send_chat_history(web_history)
+        
+        self.llm_timer = threading.Timer(1.0, self.on_llm_waiting, args=[web_history]) # add a "..." chat bubble
+        self.llm_timer.start()
+        
+    def on_llm_waiting(self, history):
+        """
+        Called when the user is waiting for an LLM reply to provide a "..." update
+        """
+        history[-1].append("...")
+        self.webserver.send_chat_history(history)
+        self.llm_timer = None
                         
     def on_llm_reply(self, response, request, end):
         """
         Recieve replies from the LLM
         """  
+        if self.llm_timer is not None:
+            self.llm_timer.cancel()
+            self.llm_timer = None
+            
         if not end:
             if request['type'] == 'completion':
                 print(response, end='')
                 sys.stdout.flush()
             elif request['type'] == 'chat':
                 current_length = request.get('current_length', 0)
-                msg = response['visible'][-1][1][current_length:]
+                msg = response['internal'][-1][1][current_length:]
                 request['current_length'] = current_length + len(msg)
                 self.llm_history = response
                 self.send_tts(msg)
+                self.webserver.send_chat_history(response['internal'])
                 print(msg, end='')
                 sys.stdout.flush()
         else:
@@ -221,33 +286,33 @@ class Chatbot(threading.Thread):
         """
         Chatbot thread main()
         """
+        self.tegrastats.start()
+        
         self.asr.start()
         self.tts.start()
         self.llm.start()
         
         self.audio_mixer.start()
         self.webserver.start()
-            
+
         time.sleep(0.5)
         
         num_msgs = 0
         num_users = 2
         note_step = -8
         
-        self.audio_mixer.play(wav="/opt/riva/python-clients/data/examples/en-US_AntiBERTa_for_word_boosting_testing.wav")
-        
         while True:
             if not self.asr: #or self.interrupt_flag:
                 #self.interrupt_flag = False
                 sys.stdout.write(">> PROMPT: ")
-                prompt = sys.stdin.readline().strip() #input()
+                prompt = sys.stdin.readline().strip() #input()  # https://stackoverflow.com/a/74325860
                 print('PROMPT => ', prompt)
                 request = self.llm.generate_chat(prompt, self.llm_history, max_new_tokens=self.args.max_new_tokens, callback=self.on_llm_reply)
                 request['event'].wait()
             else:
-                #time.sleep(1.0)
+                time.sleep(1.0)
                 
-
+                """
                 self.audio_mixer.play(tone={
                     'frequency': 440 * 2** ((1 + note_step) / 12),
                     'duration': 0.25,
@@ -262,6 +327,8 @@ class Chatbot(threading.Thread):
                     self.audio_mixer.play(wav="/opt/riva/python-clients/data/examples/en-US_AntiBERTa_for_word_boosting_testing.wav") # en-US_sample.wav  en-US_percent.wav  en-US_AntiBERTa_for_word_boosting_testing.wav
                 
                 time.sleep(1.5)
+                """
+                
                 #self.webserver.send_message("abc".encode('utf-8'), 1);
                 """
                 self.webserver.send_message({

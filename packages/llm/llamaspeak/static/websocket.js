@@ -2,7 +2,9 @@
  * handles all the websocket streaming of text and audio to/from the server
  */
 var websocket;
-var last_msg_id;
+
+var msg_count_rx;
+var msg_count_tx=0;
 
 function reportError(msg) {
   console.log(msg);
@@ -16,15 +18,34 @@ function getWebsocketURL(port=49000) {  // wss://192.168.1.2:49000
   return `${getWebsocketProtocol()}${window.location.hostname}:${port}/${name}`;
 }
 
-function getUserMessageStyle(user) {
-	var color = '#999999';
+function sendWebsocket(payload, type=0) {
+  const timestamp = Date.now();	
+	let header = new DataView(new ArrayBuffer(32));
+		
+	header.setBigUint64(0, BigInt(msg_count_tx));
+	header.setBigUint64(8, BigInt(timestamp));
+	header.setUint16(16, 42);
+	header.setUint16(18, type);
 	
-	switch(user) {
-		case 0: color = '#659864'; break; //'#347B98' '5F8D4E'
-		case 1: color = '#56718F'; break; //'#559E54' 
-  }
-
-	return `background-color: ${color}; border-color: ${color};`
+	msg_count_tx++;
+	
+	let payloadSize;
+	
+	if( payload instanceof ArrayBuffer || ArrayBuffer.isView(payload) ) { // binary
+		payloadSize = payload.byteLength;
+	}
+	else if( payload instanceof Blob) {
+		payloadSize = payload.size;
+	}
+	else { // serialize to JSON
+		payload = new TextEncoder().encode(JSON.stringify(payload)); // Uint8Array
+		payloadSize = payload.byteLength;
+	}
+	
+	header.setUint32(20, payloadSize);
+	
+	//console.log(`sending ${typeof payload} websocket message (type=${type} timestamp=${timestamp} payload_size=${payloadSize})`);
+	websocket.send(new Blob([header, payload]));
 }
 
 function onWebsocket(event) {
@@ -50,7 +71,7 @@ function onWebsocket(event) {
 		const payload_size = view.getUint32(20);
 		
 		//const latency = BigInt(Date.now()) - timestamp;  // this is negative?  sub-second client/server time sync needed
-		//console.log(`recieved websocket message:  id=${msg_id}  type=${msg_type}  timestamp=${timestamp}  latency=${latency}  magic_number=${magic_number}  payload_size=${payload_size}`);
+		//console.log(`recieved websocket message:  id=${msg_id}  type=${msg_type}  timestamp=${timestamp}  latency=${latency}  payload_size=${payload_size}`);
 		
 		if( magic_number != 42 ) {
 			console.log(`recieved invalid websocket msg (magic_number=${magic_number}  size=${msg.size}`);
@@ -60,17 +81,53 @@ function onWebsocket(event) {
 			console.log(`recieved invalid websocket msg (payload_size=${payload_size} actual=${payload.size}`);
 		}
 		
-		if( last_msg_id != undefined && msg_id != (last_msg_id + 1) )
-			console.log(`warning:  out-of-order message ID ${msg_id}  (last=${last_msg_id})`);
+		if( msg_count_rx != undefined && msg_id != (msg_count_rx + 1) )
+			console.log(`warning:  out-of-order message ID ${msg_id}  (last=${msg_count_rx})`);
 			
-		last_msg_id = msg_id;
+		msg_count_rx = msg_id;
 		
-		if( msg_type == 1 ) {
+		if( msg_type == 0 ) { // JSON message
+			payload.text().then((text) => {
+				json = JSON.parse(text);
+				//console.log('json message:', json);
+				
+				if( 'chat_history' in json ) {
+					const chat_history = json['chat_history'];
+					
+					var chc = document.getElementById('chat-history-container');
+					var isScrolledToBottom = chc.scrollHeight - chc.clientHeight <= chc.scrollTop + 1;
+					
+					$('#chat-history-container').empty(); // started clearing because server may remove partial/rejected ASR prompts
+					
+					for( let n=0; n < chat_history.length; n++ ) {
+						for( let m=0; m < chat_history[n].length; m++ ) {
+							prev_msg = $(`#chat-history-container #msg_${n}_${m}`);
+							if( prev_msg.length > 0 ) {
+								prev_msg.html(chat_history[n][m]);
+							}
+							else {
+								$('#chat-history-container').append(
+									`<div id="msg_${n}_${m}" class="chat-message-user-${m} mb-3">${chat_history[n][m]}</div><br/>`
+								);
+							}
+						}
+					}
+					
+					if( isScrolledToBottom ) // autoscroll unless the user has scrolled up
+						chc.scrollTop = chc.scrollHeight - chc.clientHeight;
+				}
+				
+				if( 'tegrastats' in json ) {
+					console.log(json['tegrastats']);
+				}
+			});
+		}
+		if( msg_type == 1 ) { // TEXT message
 			payload.text().then((text) => {
 				console.log(`text message: ${text}`);
 			});
 		}
-		else if( msg_type == 2 ) {
+		else if( msg_type == 2 ) { // AUDIO message
 			payload.arrayBuffer().then((payloadBuffer) => {
 				onAudioOutput(payloadBuffer);
 			});
@@ -84,12 +141,12 @@ function onWebsocket(event) {
   }
 
 	if( msg['type'] == 'message' ) {
-		prev_msg = $(`#container #message_${msg['id']}`);
+		prev_msg = $(`#chat-history-container #message_${msg['id']}`);
 		if( prev_msg.length > 0 ) {
 			prev_msg.html(msg['text']);
 	  }
 		else {
-			$('#container').append(`<br/><span id="message_${msg['id']}" class="message_body" style="${getUserMessageStyle(msg['user'])}">`
+			$('#chat-history-container').append(`<br/><span id="message_${msg['id']}" class="chat-message-body" style="${getUserMessageStyle(msg['user'])}">`
 									+ msg['text'] +
 									'</span><br/><br/>');
 		}
