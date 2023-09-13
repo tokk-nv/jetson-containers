@@ -1,7 +1,7 @@
 #---
 # name: text-generation-webui
 # group: llm
-# depends: [pytorch, bitsandbytes, transformers, auto_gptq, gptq-for-llama, exllama, llama_cpp]
+# depends: [pytorch, bitsandbytes, transformers, auto_gptq, gptq-for-llama, exllama:v2, llama_cpp:gguf]
 # requires: '>=34.1.0'
 # docs: docs.md
 #---
@@ -11,14 +11,19 @@ FROM ${BASE_IMAGE}
 WORKDIR /opt
 
 # force rebuild on new commits
-ADD https://api.github.com/repos/oobabooga/text-generation-webui/git/refs/heads/main /tmp/oobabooga_version.json
+#ADD https://api.github.com/repos/oobabooga/text-generation-webui/git/refs/heads/main /tmp/oobabooga_version.json
 
-RUN git clone --depth=1 https://github.com/oobabooga/text-generation-webui
+RUN git clone --depth=1 https://github.com/oobabooga/text-generation-webui && \
+    cd text-generation-webui && \
+    git log
 
 RUN cd text-generation-webui && \
     git remote add llava2 https://github.com/haotian-liu/text-generation-webui && \
     git fetch llava2 && \
-    git cherry-pick 9c085ee
+    git config --global user.email "you@example.com" && \
+    git config --global user.name "Your Name" && \
+    git cherry-pick 9c085ee && \
+    git status
 
 RUN cd text-generation-webui && \
     sed 's|^numpy.*|numpy|g' -i requirements.txt && \
@@ -32,19 +37,22 @@ RUN cd text-generation-webui && \
     sed 's|^git+https://github.com/huggingface/peft|#git+https://github.com/huggingface/peft|g' -i requirements.txt && \
     sed 's|^https://github.com/PanQiWei/AutoGPTQ|#https://github.com/PanQiWei/AutoGPTQ|g' -i requirements.txt && \
     sed 's|^https://github.com/jllllll/ctransformers-cuBLAS-wheels.*|#https://github.com/jllllll/ctransformers-cuBLAS-wheels|g' -i requirements.txt && \
+    sed 's|^exllamav2.*||g' -i requirements.txt && \
     cat requirements.txt
     
 RUN cd text-generation-webui && \
     pip3 freeze > /tmp/constraints.txt && \
-    pip3 install --no-cache-dir --verbose -r requirements.txt --constraint /tmp/constraints.txt && \
-    rm /tmp/constraints.txt
+    sed 's|^pydantic.*||' -i /tmp/constraints.txt && \
+    cat /tmp/constraints.txt && \
+    pip3 install --no-cache-dir --verbose -r requirements.txt --constraint /tmp/constraints.txt
+
+RUN ls
     
 RUN cd text-generation-webui && \
     sed 's|@functools.cache|@functools.lru_cache\(maxsize=None\)|' -i modules/chat.py && \
     sed 's|@functools.cache|@functools.lru_cache\(maxsize=None\)|' -i modules/loaders.py && \
     sed 's|@functools.cache|@functools.lru_cache\(maxsize=None\)|' -i modules/presets.py && \
-    sed 's/params = params | ggml_params/params.update(ggml_params)/' -i modules/llamacpp_model.py && \
-    cat modules/llamacpp_model.py | grep ggml_params
+    sed 's/params = params | ggml_params/params.update(ggml_params)/' -i modules/llamacpp_model.py 
 
 RUN cp /opt/GPTQ-for-LLaMa/*.py /opt/text-generation-webui
 
