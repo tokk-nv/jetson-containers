@@ -1,0 +1,119 @@
+root@jao02-jp511:/opt/TensorRT/demo/Diffusion# LD_PRELOAD=${PLUGIN_LIBS} python3 demo-diffusion.py "a beautiful photograph of Mt. Fuji during cherry blossom" --hf-token=$HF_TOKEN -v
+
+
+===================================BUG REPORT===================================
+Welcome to bitsandbytes. For bug reports, please run
+
+python -m bitsandbytes
+
+ and submit this information together with your error trace to: https://github.com/TimDettmers/bitsandbytes/issues
+================================================================================
+bin /usr/local/lib/python3.8/dist-packages/bitsandbytes/libbitsandbytes_cuda114.so
+/usr/local/lib/python3.8/dist-packages/bitsandbytes/cuda_setup/main.py:149: UserWarning: WARNING: The following directories listed in your path were found to be non-existent: {PosixPath('/.local/cuda/lib64')}
+  warn(msg)
+CUDA SETUP: CUDA runtime path found: /usr/local/cuda/lib64/libcudart.so.11.0
+CUDA SETUP: Highest compute capability among GPUs detected: 8.7
+CUDA SETUP: Detected CUDA version 114
+CUDA SETUP: Loading binary /usr/local/lib/python3.8/dist-packages/bitsandbytes/libbitsandbytes_cuda114.so...
+[I] Initializing StableDiffusion demo with TensorRT Plugins
+Exporting model: onnx/clip.onnx
+Downloading (…)lve/main/config.json: 100%|██████████████████████| 4.52k/4.52k [00:00<00:00, 1.82MB/s]
+Downloading model.safetensors: 100%|█████████████████████████████| 1.71G/1.71G [00:15<00:00, 112MB/s]
+/usr/local/lib/python3.8/dist-packages/transformers/models/clip/modeling_clip.py:287: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if attn_weights.size() != (bsz * self.num_heads, tgt_len, src_len):
+/usr/local/lib/python3.8/dist-packages/transformers/models/clip/modeling_clip.py:295: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if causal_attention_mask.size() != (bsz, 1, tgt_len, src_len):
+/usr/local/lib/python3.8/dist-packages/transformers/models/clip/modeling_clip.py:327: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if attn_output.size() != (bsz * self.num_heads, tgt_len, self.head_dim):
+/usr/local/lib/python3.8/dist-packages/torch/onnx/symbolic_opset9.py:5589: UserWarning: Exporting aten::index operator of advanced indexing in opset 16 is achieved by combination of multiple ONNX operators, including Reshape, Transpose, Concat, and Gather. If indices include negative values, the exported graph will produce incorrect results.
+  warnings.warn(
+============ Diagnostic Run torch.onnx.export version 2.0.0+nv23.05 ============
+verbose: False, log level: Level.ERROR
+======================= 0 NONE 0 NOTE 0 WARNING 0 ERROR ========================
+
+Generating optimizing model: onnx/clip.opt.onnx
+CLIP: original .. 1856 nodes, 2053 tensors, 1 inputs, 2 outputs
+CLIP: remove output[1] .. 1832 nodes, 2029 tensors, 1 inputs, 1 outputs
+[I] Folding Constants | Pass 1
+[E] Module: 'onnx_graphsurgeon' version '0.3.12' is installed, but version '>=0.3.21' is required.
+    Please install the required version or set POLYGRAPHY_AUTOINSTALL_DEPS=1 in your environment variables to allow Polygraphy to do so automatically.
+    Attempting to continue with the currently installed version of this module, but note that this may cause errors!
+[W] Constant folding pass failed. Skipping subsequent passes.
+    Note: Error was:
+    fold_constants() got an unexpected keyword argument 'size_threshold'
+CLIP: fold constants .. 1832 nodes, 2029 tensors, 1 inputs, 1 outputs
+CLIP: shape inference .. 1832 nodes, 2029 tensors, 1 inputs, 1 outputs
+CLIP: removed 12 casts .. 1808 nodes, 2005 tensors, 1 inputs, 1 outputs
+CLIP: inserted 25 LayerNorm plugins .. 1546 nodes, 1743 tensors, 1 inputs, 1 outputs
+CLIP: final .. 1546 nodes, 1743 tensors, 1 inputs, 1 outputs
+Building TensorRT engine for onnx/clip.opt.onnx: engine/clip.plan
+[W] onnx2trt_utils.cpp:375: Your ONNX model has been generated with INT64 weights, while TensorRT does not natively support INT64. Attempting to cast down to INT32.
+[W] onnx2trt_utils.cpp:403: One or more weights outside the range of INT32 was clamped
+[I]     Configuring with profiles: [Profile().add('input_ids', min=(1, 77), opt=(1, 77), max=(16, 77))]
+[I] Building engine with configuration:
+    Flags                  | [FP16]
+    Engine Capability      | EngineCapability.DEFAULT
+    Memory Pools           | [WORKSPACE: 30587.38 MiB]
+    Tactic Sources         | [CUBLAS, CUBLAS_LT, CUDNN, EDGE_MASK_CONVOLUTIONS, JIT_CONVOLUTIONS]
+    Profiling Verbosity    | ProfilingVerbosity.DETAILED
+[W] DLA requests all profiles have same min, max, and opt value. All dla layers are falling back to GPU
+[W] TensorRT encountered issues when converting weights between types and that could affect accuracy.
+[W] If this is not the desired behavior, please modify the weights or retrain with regularization to adjust the magnitude of the weights.
+[W] Check verbose logs for the list of affected weights.
+[W] - 84 weights are affected by this issue: Detected subnormal FP16 values.
+[W] - 2 weights are affected by this issue: Detected values less than smallest positive FP16 subnormal value and converted them to the FP16 minimum subnormalized value.
+[W] - 1 weights are affected by this issue: Detected finite FP32 values which would overflow in FP16 and converted them to the closest finite FP16 value.
+[I] Finished engine building in 213.492 seconds
+[I] Saving engine to engine/clip.plan
+Exporting model: onnx/unet_fp16.onnx
+Downloading (…)on_pytorch_model.bin: 100%|███████████████████████| 1.72G/1.72G [00:15<00:00, 113MB/s]
+Downloading (…)p16/unet/config.json: 100%|███████████████████████████| 772/772 [00:00<00:00, 887kB/s]
+/usr/local/lib/python3.8/dist-packages/diffusers/models/unet_2d_condition.py:273: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if any(s % default_overall_up_factor != 0 for s in sample.shape[-2:]):
+/usr/local/lib/python3.8/dist-packages/diffusers/models/resnet.py:111: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  assert hidden_states.shape[1] == self.channels
+/usr/local/lib/python3.8/dist-packages/diffusers/models/resnet.py:116: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  assert hidden_states.shape[1] == self.channels
+/usr/local/lib/python3.8/dist-packages/diffusers/models/resnet.py:39: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  assert hidden_states.shape[1] == self.channels
+/usr/local/lib/python3.8/dist-packages/diffusers/models/resnet.py:52: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if hidden_states.shape[0] >= 64:
+/usr/local/lib/python3.8/dist-packages/diffusers/models/unet_2d_condition.py:349: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if not return_dict:
+============ Diagnostic Run torch.onnx.export version 2.0.0+nv23.05 ============
+verbose: False, log level: Level.ERROR
+======================= 0 NONE 0 NOTE 0 WARNING 0 ERROR ========================
+
+Generating optimizing model: onnx/unet_fp16.opt.onnx
+UNet: original .. 7405 nodes, 8094 tensors, 3 inputs, 1 outputs
+UNet: replaced 61 InstanceNorms .. 7771 nodes, 8704 tensors, 3 inputs, 1 outputs
+UNet: removed 32 casts .. 7707 nodes, 8640 tensors, 3 inputs, 1 outputs
+UNet: removed 0 parallel swish ops .. 7707 nodes, 8640 tensors, 3 inputs, 1 outputs
+UNet: adjusted 64 adds .. 7707 nodes, 8640 tensors, 3 inputs, 1 outputs
+UNet: fixed 3 resizes .. 7719 nodes, 8661 tensors, 3 inputs, 1 outputs
+UNet: cleanup .. 7719 nodes, 8661 tensors, 3 inputs, 1 outputs
+[I] Folding Constants | Pass 1
+[W] Constant folding pass failed. Skipping subsequent passes.
+    Note: Error was:
+    fold_constants() got an unexpected keyword argument 'size_threshold'
+UNet: fold constants .. 7719 nodes, 8661 tensors, 3 inputs, 1 outputs
+UNet: shape inference .. 7719 nodes, 8661 tensors, 3 inputs, 1 outputs
+UNet: inserted 0 fMHA plugins .. 7719 nodes, 8661 tensors, 3 inputs, 1 outputs
+Traceback (most recent call last):
+  File "demo-diffusion.py", line 487, in <module>
+    demo.loadEngines(args.engine_dir, args.onnx_dir, args.onnx_opset,
+  File "demo-diffusion.py", line 240, in loadEngines
+    onnx_opt_graph = obj.optimize(onnx.load(onnx_path), minimal_optimization=minimal_optimization)
+  File "/opt/TensorRT/demo/Diffusion/models.py", line 890, in optimize
+    num_fmhca_inserted = opt.insert_fmhca_plugin(num_heads, sm)
+  File "/opt/TensorRT/demo/Diffusion/models.py", line 633, in insert_fmhca_plugin
+    while self.fuse_kv_insert_fmhca(num_heads, mhca_index, sm):
+  File "/opt/TensorRT/demo/Diffusion/models.py", line 598, in fuse_kv_insert_fmhca
+    self.mha_mhca_detected(nodes[idx], mha=False)
+  File "/opt/TensorRT/demo/Diffusion/models.py", line 582, in mha_mhca_detected
+    final_tranpose = o.o().o().o().o(num_dynamic_q).o()
+  File "/usr/lib/python3.8/dist-packages/onnx_graphsurgeon/ir/node.py", line 88, in o
+    return self.outputs[tensor_idx].outputs[consumer_idx]
+IndexError: list index out of range
+root@jao02-jp511:/opt/TensorRT/demo/Diffusion#
+r

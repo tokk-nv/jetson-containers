@@ -1,0 +1,379 @@
+root@jao02-jp511:/opt/TensorRT/demo/Diffusion# LD_PRELOAD=${PLUGIN_LIBS} python3 demo-diffusion.py "a beautiful photograph of Mt. Fuji during cherry blossom" --hf-token=$HF_TOKEN -v
+
+
+===================================BUG REPORT===================================
+Welcome to bitsandbytes. For bug reports, please run
+
+python -m bitsandbytes
+
+ and submit this information together with your error trace to: https://github.com/TimDettmers/bitsandbytes/issues
+================================================================================
+bin /usr/local/lib/python3.8/dist-packages/bitsandbytes/libbitsandbytes_cuda114.so
+/usr/local/lib/python3.8/dist-packages/bitsandbytes/cuda_setup/main.py:149: UserWarning: WARNING: The following directories listed in your path were found to be non-existent: {PosixPath('/.local/cuda/lib64')}
+  warn(msg)
+CUDA SETUP: CUDA runtime path found: /usr/local/cuda/lib64/libcudart.so
+CUDA SETUP: Highest compute capability among GPUs detected: 8.7
+CUDA SETUP: Detected CUDA version 114
+CUDA SETUP: Loading binary /usr/local/lib/python3.8/dist-packages/bitsandbytes/libbitsandbytes_cuda114.so...
+[I] Initializing StableDiffusion demo with TensorRT Plugins
+Exporting model: onnx/clip.onnx
+/usr/local/lib/python3.8/dist-packages/transformers/models/clip/modeling_clip.py:287: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if attn_weights.size() != (bsz * self.num_heads, tgt_len, src_len):
+/usr/local/lib/python3.8/dist-packages/transformers/models/clip/modeling_clip.py:295: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if causal_attention_mask.size() != (bsz, 1, tgt_len, src_len):
+/usr/local/lib/python3.8/dist-packages/transformers/models/clip/modeling_clip.py:327: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if attn_output.size() != (bsz * self.num_heads, tgt_len, self.head_dim):
+/usr/local/lib/python3.8/dist-packages/torch/onnx/symbolic_opset9.py:5589: UserWarning: Exporting aten::index operator of advanced indexing in opset 16 is achieved by combination of multiple ONNX operators, including Reshape, Transpose, Concat, and Gather. If indices include negative values, the exported graph will produce incorrect results.
+  warnings.warn(
+============ Diagnostic Run torch.onnx.export version 2.0.0+nv23.05 ============
+verbose: False, log level: Level.ERROR
+======================= 0 NONE 0 NOTE 0 WARNING 0 ERROR ========================
+
+Generating optimizing model: onnx/clip.opt.onnx
+CLIP: original .. 1856 nodes, 2053 tensors, 1 inputs, 2 outputs
+CLIP: remove output[1] .. 1832 nodes, 2029 tensors, 1 inputs, 1 outputs
+[I] Folding Constants | Pass 1
+2023-09-28 00:17:41.128505738 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/Unsqueeze_2
+2023-09-28 00:17:41.128580396 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/Unsqueeze_1
+2023-09-28 00:17:41.128633997 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/Unsqueeze
+2023-09-28 00:17:41.128644397 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/Unsqueeze_8
+2023-09-28 00:17:41.128652301 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/Unsqueeze_7
+[I] Inferring shapes in the model with `onnxruntime.tools.symbolic_shape_infer`.
+    Note: To force Polygraphy to use `onnx.shape_inference` instead, set `allow_onnxruntime=False` or use the `--no-onnxruntime-shape-inference` command-line option.
+[I]     Total Nodes | Original:  1832, After Folding:  1216 |   616 Nodes Folded
+[I] Folding Constants | Pass 2
+2023-09-28 00:17:41.954121441 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.11/self_attn/Unsqueeze_12
+2023-09-28 00:17:41.954180834 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.11/self_attn/Unsqueeze_9
+2023-09-28 00:17:41.954199074 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.11/self_attn/Unsqueeze_17
+2023-09-28 00:17:41.954211650 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.11/self_attn/Unsqueeze_16
+2023-09-28 00:17:41.954220931 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.11/self_attn/Unsqueeze_14
+2023-09-28 00:17:41.954229091 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.11/self_attn/Unsqueeze_11
+2023-09-28 00:17:41.954236547 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.11/self_attn/Unsqueeze_8
+2023-09-28 00:17:41.954245603 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.11/self_attn/Unsqueeze_3
+2023-09-28 00:17:41.954252067 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.10/self_attn/Unsqueeze_12
+2023-09-28 00:17:41.954259683 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.10/self_attn/Unsqueeze_9
+2023-09-28 00:17:41.954266243 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.10/self_attn/Unsqueeze_17
+2023-09-28 00:17:41.954272932 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.10/self_attn/Unsqueeze_16
+2023-09-28 00:17:41.954280164 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.10/self_attn/Unsqueeze_14
+2023-09-28 00:17:41.954288324 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.10/self_attn/Unsqueeze_11
+2023-09-28 00:17:41.954296004 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.10/self_attn/Unsqueeze_8
+2023-09-28 00:17:41.954303492 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.10/self_attn/Unsqueeze_3
+2023-09-28 00:17:41.954309924 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.9/self_attn/Unsqueeze_12
+2023-09-28 00:17:41.954317220 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.9/self_attn/Unsqueeze_9
+2023-09-28 00:17:41.954323461 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.9/self_attn/Unsqueeze_17
+2023-09-28 00:17:41.954330021 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.9/self_attn/Unsqueeze_16
+2023-09-28 00:17:41.954337125 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.9/self_attn/Unsqueeze_14
+2023-09-28 00:17:41.954344389 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.9/self_attn/Unsqueeze_11
+2023-09-28 00:17:41.954351493 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.9/self_attn/Unsqueeze_8
+2023-09-28 00:17:41.954358789 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.9/self_attn/Unsqueeze_3
+2023-09-28 00:17:41.954365125 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.8/self_attn/Unsqueeze_12
+2023-09-28 00:17:41.954372358 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.8/self_attn/Unsqueeze_9
+2023-09-28 00:17:41.954378918 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.8/self_attn/Unsqueeze_17
+2023-09-28 00:17:41.954385670 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.8/self_attn/Unsqueeze_16
+2023-09-28 00:17:41.954392614 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.8/self_attn/Unsqueeze_14
+2023-09-28 00:17:41.954400742 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.8/self_attn/Unsqueeze_11
+2023-09-28 00:17:41.954408006 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.8/self_attn/Unsqueeze_8
+2023-09-28 00:17:41.954415334 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.8/self_attn/Unsqueeze_3
+2023-09-28 00:17:41.954421447 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.7/self_attn/Unsqueeze_12
+2023-09-28 00:17:41.954428647 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.7/self_attn/Unsqueeze_9
+2023-09-28 00:17:41.954435015 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.7/self_attn/Unsqueeze_17
+2023-09-28 00:17:41.954441767 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.7/self_attn/Unsqueeze_16
+2023-09-28 00:17:41.954448647 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.7/self_attn/Unsqueeze_14
+2023-09-28 00:17:41.954455655 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.7/self_attn/Unsqueeze_11
+2023-09-28 00:17:41.954462567 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.7/self_attn/Unsqueeze_8
+2023-09-28 00:17:41.954469511 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.7/self_attn/Unsqueeze_3
+2023-09-28 00:17:41.954475912 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.6/self_attn/Unsqueeze_12
+2023-09-28 00:17:41.954482824 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.6/self_attn/Unsqueeze_9
+2023-09-28 00:17:41.954488808 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.6/self_attn/Unsqueeze_17
+2023-09-28 00:17:41.954495336 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.6/self_attn/Unsqueeze_16
+2023-09-28 00:17:41.954502152 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.6/self_attn/Unsqueeze_14
+2023-09-28 00:17:41.954509000 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.6/self_attn/Unsqueeze_11
+2023-09-28 00:17:41.954515880 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.6/self_attn/Unsqueeze_8
+2023-09-28 00:17:41.954523113 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.6/self_attn/Unsqueeze_3
+2023-09-28 00:17:41.954529705 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.5/self_attn/Unsqueeze_12
+2023-09-28 00:17:41.954537033 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.5/self_attn/Unsqueeze_9
+2023-09-28 00:17:41.954543145 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.5/self_attn/Unsqueeze_17
+2023-09-28 00:17:41.954549481 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.5/self_attn/Unsqueeze_16
+2023-09-28 00:17:41.954556297 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.5/self_attn/Unsqueeze_14
+2023-09-28 00:17:41.954563305 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.5/self_attn/Unsqueeze_11
+2023-09-28 00:17:41.954570121 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.5/self_attn/Unsqueeze_8
+2023-09-28 00:17:41.954577386 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.5/self_attn/Unsqueeze_3
+2023-09-28 00:17:41.954583850 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.4/self_attn/Unsqueeze_12
+2023-09-28 00:17:41.954591018 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.4/self_attn/Unsqueeze_9
+2023-09-28 00:17:41.954597290 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.4/self_attn/Unsqueeze_17
+2023-09-28 00:17:41.954604842 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.4/self_attn/Unsqueeze_16
+2023-09-28 00:17:41.954611946 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.4/self_attn/Unsqueeze_14
+2023-09-28 00:17:41.954618954 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.4/self_attn/Unsqueeze_11
+2023-09-28 00:17:41.954625643 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.4/self_attn/Unsqueeze_8
+2023-09-28 00:17:41.954634155 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.4/self_attn/Unsqueeze_3
+2023-09-28 00:17:41.954641163 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.3/self_attn/Unsqueeze_12
+2023-09-28 00:17:41.954649323 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.3/self_attn/Unsqueeze_9
+2023-09-28 00:17:41.954657547 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.3/self_attn/Unsqueeze_17
+2023-09-28 00:17:41.954664555 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.3/self_attn/Unsqueeze_16
+2023-09-28 00:17:41.954671435 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.3/self_attn/Unsqueeze_14
+2023-09-28 00:17:41.954678764 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.3/self_attn/Unsqueeze_11
+2023-09-28 00:17:41.954685548 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.3/self_attn/Unsqueeze_8
+2023-09-28 00:17:41.954692524 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.3/self_attn/Unsqueeze_3
+2023-09-28 00:17:41.954698540 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.2/self_attn/Unsqueeze_12
+2023-09-28 00:17:41.954705772 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.2/self_attn/Unsqueeze_9
+2023-09-28 00:17:41.954712140 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.2/self_attn/Unsqueeze_17
+2023-09-28 00:17:41.954720332 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.2/self_attn/Unsqueeze_16
+2023-09-28 00:17:41.954728397 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.2/self_attn/Unsqueeze_14
+2023-09-28 00:17:41.954735885 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.2/self_attn/Unsqueeze_11
+2023-09-28 00:17:41.954742733 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.2/self_attn/Unsqueeze_8
+2023-09-28 00:17:41.954752973 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.2/self_attn/Unsqueeze_3
+2023-09-28 00:17:41.954760141 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.1/self_attn/Unsqueeze_12
+2023-09-28 00:17:41.954767309 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.1/self_attn/Unsqueeze_9
+2023-09-28 00:17:41.954773645 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.1/self_attn/Unsqueeze_17
+2023-09-28 00:17:41.954779982 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.1/self_attn/Unsqueeze_16
+2023-09-28 00:17:41.954786766 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.1/self_attn/Unsqueeze_14
+2023-09-28 00:17:41.954793582 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.1/self_attn/Unsqueeze_11
+2023-09-28 00:17:41.954803214 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.1/self_attn/Unsqueeze_8
+2023-09-28 00:17:41.954811598 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.1/self_attn/Unsqueeze_3
+2023-09-28 00:17:41.954819854 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.0/self_attn/Unsqueeze_12
+2023-09-28 00:17:41.954826927 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.0/self_attn/Unsqueeze_9
+2023-09-28 00:17:41.954833679 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.0/self_attn/Unsqueeze_17
+2023-09-28 00:17:41.954840623 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.0/self_attn/Unsqueeze_16
+2023-09-28 00:17:41.954847663 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.0/self_attn/Unsqueeze_14
+2023-09-28 00:17:41.954858031 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.0/self_attn/Unsqueeze_11
+2023-09-28 00:17:41.954865839 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.0/self_attn/Unsqueeze_8
+2023-09-28 00:17:41.954875919 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/encoder/layers.0/self_attn/Unsqueeze_3
+2023-09-28 00:17:41.954885616 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /text_model/embeddings/Unsqueeze
+[I]     Total Nodes | Original:  1216, After Folding:  1040 |   176 Nodes Folded
+[I] Folding Constants | Pass 3
+[I]     Total Nodes | Original:  1040, After Folding:  1040 |     0 Nodes Folded
+CLIP: fold constants .. 1040 nodes, 1765 tensors, 1 inputs, 1 outputs
+CLIP: shape inference .. 1040 nodes, 1765 tensors, 1 inputs, 1 outputs
+CLIP: removed 12 casts .. 1016 nodes, 1741 tensors, 1 inputs, 1 outputs
+CLIP: inserted 25 LayerNorm plugins .. 804 nodes, 1479 tensors, 1 inputs, 1 outputs
+CLIP: final .. 804 nodes, 1479 tensors, 1 inputs, 1 outputs
+Building TensorRT engine for onnx/clip.opt.onnx: engine/clip.plan
+[W] onnx2trt_utils.cpp:375: Your ONNX model has been generated with INT64 weights, while TensorRT does not natively support INT64. Attempting to cast down to INT32.
+[I]     Configuring with profiles: [Profile().add('input_ids', min=(1, 77), opt=(1, 77), max=(16, 77))]
+[I] Building engine with configuration:
+    Flags                  | [FP16]
+    Engine Capability      | EngineCapability.DEFAULT
+    Memory Pools           | [WORKSPACE: 30587.38 MiB]
+    Tactic Sources         | [CUBLAS, CUBLAS_LT, CUDNN, EDGE_MASK_CONVOLUTIONS, JIT_CONVOLUTIONS]
+    Profiling Verbosity    | ProfilingVerbosity.DETAILED
+[W] DLA requests all profiles have same min, max, and opt value. All dla layers are falling back to GPU
+[W] TensorRT encountered issues when converting weights between types and that could affect accuracy.
+[W] If this is not the desired behavior, please modify the weights or retrain with regularization to adjust the magnitude of the weights.
+[W] Check verbose logs for the list of affected weights.
+[W] - 84 weights are affected by this issue: Detected subnormal FP16 values.
+[W] - 2 weights are affected by this issue: Detected values less than smallest positive FP16 subnormal value and converted them to the FP16 minimum subnormalized value.
+[W] - 1 weights are affected by this issue: Detected finite FP32 values which would overflow in FP16 and converted them to the closest finite FP16 value.
+[I] Finished engine building in 178.418 seconds
+[I] Saving engine to engine/clip.plan
+Exporting model: onnx/unet_fp16.onnx
+Downloading (…)on_pytorch_model.bin: 100%|███████████████████████| 1.72G/1.72G [00:14<00:00, 115MB/s]
+Downloading (…)p16/unet/config.json: 100%|███████████████████████████| 772/772 [00:00<00:00, 567kB/s]
+/usr/local/lib/python3.8/dist-packages/diffusers/models/unet_2d_condition.py:273: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if any(s % default_overall_up_factor != 0 for s in sample.shape[-2:]):
+/usr/local/lib/python3.8/dist-packages/diffusers/models/resnet.py:111: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  assert hidden_states.shape[1] == self.channels
+/usr/local/lib/python3.8/dist-packages/diffusers/models/resnet.py:116: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  assert hidden_states.shape[1] == self.channels
+/usr/local/lib/python3.8/dist-packages/diffusers/models/resnet.py:39: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  assert hidden_states.shape[1] == self.channels
+/usr/local/lib/python3.8/dist-packages/diffusers/models/resnet.py:52: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if hidden_states.shape[0] >= 64:
+/usr/local/lib/python3.8/dist-packages/diffusers/models/unet_2d_condition.py:349: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if not return_dict:
+============ Diagnostic Run torch.onnx.export version 2.0.0+nv23.05 ============
+verbose: False, log level: Level.ERROR
+======================= 0 NONE 0 NOTE 0 WARNING 0 ERROR ========================
+
+Generating optimizing model: onnx/unet_fp16.opt.onnx
+UNet: original .. 7405 nodes, 8094 tensors, 3 inputs, 1 outputs
+UNet: replaced 61 InstanceNorms .. 7771 nodes, 8704 tensors, 3 inputs, 1 outputs
+UNet: removed 32 casts .. 7707 nodes, 8640 tensors, 3 inputs, 1 outputs
+UNet: removed 0 parallel swish ops .. 7707 nodes, 8640 tensors, 3 inputs, 1 outputs
+UNet: adjusted 64 adds .. 7707 nodes, 8640 tensors, 3 inputs, 1 outputs
+UNet: fixed 3 resizes .. 7719 nodes, 8661 tensors, 3 inputs, 1 outputs
+UNet: cleanup .. 7719 nodes, 8661 tensors, 3 inputs, 1 outputs
+[I] Folding Constants | Pass 1
+[I]     Total Nodes | Original:  7719, After Folding:  5594 |  2125 Nodes Folded
+[I] Folding Constants | Pass 2
+2023-09-28 00:22:20.185660966 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.2/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.185725895 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.2/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.185753800 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.2/Unsqueeze_6
+2023-09-28 00:22:20.185766728 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.2/Unsqueeze_2
+2023-09-28 00:22:20.185789256 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.1/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.185805161 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.1/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.185827689 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.1/Unsqueeze_6
+2023-09-28 00:22:20.185838025 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.1/Unsqueeze_2
+2023-09-28 00:22:20.185855370 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.0/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.185869386 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.0/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.185890506 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.0/Unsqueeze_6
+2023-09-28 00:22:20.185900266 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.0/Unsqueeze_2
+2023-09-28 00:22:20.185918027 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.2/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.185934091 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.2/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.185954795 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.2/Unsqueeze_6
+2023-09-28 00:22:20.185964876 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.2/Unsqueeze_2
+2023-09-28 00:22:20.185983916 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.1/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.185998892 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.1/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.186020109 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.1/Unsqueeze_6
+2023-09-28 00:22:20.186029997 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.1/Unsqueeze_2
+2023-09-28 00:22:20.186046669 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.0/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.186060814 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.0/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.186082574 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.0/Unsqueeze_6
+2023-09-28 00:22:20.186092974 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.0/Unsqueeze_2
+2023-09-28 00:22:20.186110351 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.2/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.186125455 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.2/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.186146127 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.2/Unsqueeze_6
+2023-09-28 00:22:20.186155983 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.2/Unsqueeze_2
+2023-09-28 00:22:20.186176784 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.1/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.186192784 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.1/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.186213553 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.1/Unsqueeze_6
+2023-09-28 00:22:20.186224465 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.1/Unsqueeze_2
+2023-09-28 00:22:20.186244017 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.0/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.186259570 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.0/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.186279730 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.0/Unsqueeze_6
+2023-09-28 00:22:20.186294130 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.0/Unsqueeze_2
+2023-09-28 00:22:20.186310579 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /mid_block/attentions.0/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.186325619 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /mid_block/attentions.0/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.186344019 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /mid_block/attentions.0/Unsqueeze_6
+2023-09-28 00:22:20.186353267 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /mid_block/attentions.0/Unsqueeze_2
+2023-09-28 00:22:20.186369588 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.1/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.186385172 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.1/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.186404628 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.1/Unsqueeze_6
+2023-09-28 00:22:20.186414997 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.1/Unsqueeze_2
+2023-09-28 00:22:20.186433365 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.0/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.186448533 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.0/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.186467414 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.0/Unsqueeze_6
+2023-09-28 00:22:20.186476406 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.0/Unsqueeze_2
+2023-09-28 00:22:20.186495254 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.1/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.186508918 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.1/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.186526359 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.1/Unsqueeze_6
+2023-09-28 00:22:20.186535543 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.1/Unsqueeze_2
+2023-09-28 00:22:20.186553527 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.0/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.186566584 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.0/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.186584088 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.0/Unsqueeze_6
+2023-09-28 00:22:20.186593016 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.0/Unsqueeze_2
+2023-09-28 00:22:20.186609752 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.1/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.186622809 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.1/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.186640249 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.1/Unsqueeze_6
+2023-09-28 00:22:20.186650969 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.1/Unsqueeze_2
+2023-09-28 00:22:20.186668346 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.0/transformer_blocks.0/attn2/Unsqueeze_20
+2023-09-28 00:22:20.186681370 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.0/transformer_blocks.0/attn1/Unsqueeze_20
+2023-09-28 00:22:20.186698394 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.0/Unsqueeze_6
+2023-09-28 00:22:20.186707770 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.0/Unsqueeze_2
+2023-09-28 00:22:20.186800924 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.2/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.186815421 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.2/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.186823389 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.2/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.186831133 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.2/transformer_blocks.0/attn2/Unsqueeze_7
+2023-09-28 00:22:20.186838557 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.1/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.186845981 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.1/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.186852925 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.1/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.186859869 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.1/transformer_blocks.0/attn2/Unsqueeze_7
+2023-09-28 00:22:20.186867166 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.0/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.186874238 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.0/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.186883102 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.0/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.186889982 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.3/attentions.0/transformer_blocks.0/attn2/Unsqueeze_7
+2023-09-28 00:22:20.186898046 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.2/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.186905598 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.2/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.186912606 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.2/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.186919903 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.2/transformer_blocks.0/attn2/Unsqueeze_7
+2023-09-28 00:22:20.186927583 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.1/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.186934847 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.1/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.186941407 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.1/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.186948255 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.1/transformer_blocks.0/attn2/Unsqueeze_7
+2023-09-28 00:22:20.186955679 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.0/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.186962815 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.0/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.186970368 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.0/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.186977408 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.2/attentions.0/transformer_blocks.0/attn2/Unsqueeze_7
+2023-09-28 00:22:20.186984576 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.2/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.186991360 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.2/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.186998848 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.2/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.187005888 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.2/transformer_blocks.0/attn2/Unsqueeze_7
+2023-09-28 00:22:20.187012960 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.1/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.187020033 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.1/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.187027137 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.1/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.187034401 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.1/transformer_blocks.0/attn2/Unsqueeze_7
+2023-09-28 00:22:20.187040993 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.0/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.187048001 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.0/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.187055137 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.0/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.187062241 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /up_blocks.1/attentions.0/transformer_blocks.0/attn2/Unsqueeze_7
+2023-09-28 00:22:20.187069474 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /mid_block/attentions.0/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.187083522 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /mid_block/attentions.0/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.187092098 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /mid_block/attentions.0/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.187101186 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /mid_block/attentions.0/transformer_blocks.0/attn2/Unsqueeze_7
+2023-09-28 00:22:20.187108674 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.1/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.187119043 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.1/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.187130499 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.1/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.187138307 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.1/transformer_blocks.0/attn2/Unsqueeze_7
+2023-09-28 00:22:20.187148163 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.0/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.187156931 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.0/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.187165700 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.0/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.187175268 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.2/attentions.0/transformer_blocks.0/attn2/Unsqueeze_7
+2023-09-28 00:22:20.187183780 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.1/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.187191908 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.1/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.187207108 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.1/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.187217413 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.1/transformer_blocks.0/attn2/Unsqueeze_7
+2023-09-28 00:22:20.187227589 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.0/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.187238213 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.0/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.187246021 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.0/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.187254213 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.1/attentions.0/transformer_blocks.0/attn2/Unsqueeze_7
+2023-09-28 00:22:20.187263237 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.1/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.187273318 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.1/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.187283622 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.1/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.187293734 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.1/transformer_blocks.0/attn2/Unsqueeze_7
+2023-09-28 00:22:20.187303174 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.0/transformer_blocks.0/attn2/Unsqueeze_16
+2023-09-28 00:22:20.187312518 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.0/transformer_blocks.0/attn2/Unsqueeze_13
+2023-09-28 00:22:20.187321127 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.0/transformer_blocks.0/attn2/Unsqueeze_10
+2023-09-28 00:22:20.187352455 [W:onnxruntime:, unsqueeze_elimination.cc:20 Apply] UnsqueezeElimination cannot remove node /down_blocks.0/attentions.0/transformer_blocks.0/attn2/Unsqueeze_7
+[I]     Total Nodes | Original:  5594, After Folding:  4471 |  1123 Nodes Folded
+[I] Folding Constants | Pass 3
+[I]     Total Nodes | Original:  4471, After Folding:  4471 |     0 Nodes Folded
+UNet: fold constants .. 4471 nodes, 7203 tensors, 3 inputs, 1 outputs
+UNet: shape inference .. 4471 nodes, 7203 tensors, 3 inputs, 1 outputs
+UNet: inserted 0 fMHA plugins .. 4471 nodes, 7203 tensors, 3 inputs, 1 outputs
+UNet: inserted 16 fMHCA plugins .. 3767 nodes, 5971 tensors, 3 inputs, 1 outputs
+UNet: inserted 61 GroupNorm plugins .. 2762 nodes, 4661 tensors, 3 inputs, 1 outputs
+UNet: inserted 48 LayerNorm plugins .. 2282 nodes, 4085 tensors, 3 inputs, 1 outputs
+UNet: inserted 16 SplitGeLU plugins .. 2170 nodes, 3861 tensors, 3 inputs, 1 outputs
+UNet: inserted 16 SeqLen2Spatial plugins .. 2058 nodes, 3685 tensors, 3 inputs, 1 outputs
+UNet: final .. 2058 nodes, 3685 tensors, 3 inputs, 1 outputs
+Building TensorRT engine for onnx/unet_fp16.opt.onnx: engine/unet_fp16.plan
+[libprotobuf WARNING google/protobuf/io/coded_stream.cc:604] Reading dangerously large protocol message.  If the message turns out to be larger than 2147483647 bytes, parsing will be halted for security reasons.  To increase the limit (or to disable these warnings), see CodedInputStream::SetTotalBytesLimit() in google/protobuf/io/coded_stream.h.
+[libprotobuf WARNING google/protobuf/io/coded_stream.cc:81] The total number of bytes read was 1720277297
+[libprotobuf WARNING google/protobuf/io/coded_stream.cc:604] Reading dangerously large protocol message.  If the message turns out to be larger than 2147483647 bytes, parsing will be halted for security reasons.  To increase the limit (or to disable these warnings), see CodedInputStream::SetTotalBytesLimit() in google/protobuf/io/coded_stream.h.
+[libprotobuf WARNING google/protobuf/io/coded_stream.cc:81] The total number of bytes read was 1720277297
+[W] onnx2trt_utils.cpp:403: One or more weights outside the range of INT32 was clamped
+[I]     Configuring with profiles: [Profile().add('sample', min=(2, 4, 64, 64), opt=(2, 4, 64, 64), max=(32, 4, 64, 64)).add('encoder_hidden_states', min=(2, 77, 768), opt=(2, 77, 768), max=(32, 77, 768)).add('timestep', min=[1], opt=[1], max=[1])]
+[I] Building engine with configuration:
+    Flags                  | [FP16]
+    Engine Capability      | EngineCapability.DEFAULT
+    Memory Pools           | [WORKSPACE: 30587.38 MiB]
+    Tactic Sources         | [CUBLAS, CUBLAS_LT, CUDNN, EDGE_MASK_CONVOLUTIONS, JIT_CONVOLUTIONS]
+    Profiling Verbosity    | ProfilingVerbosity.DETAILED
+[E] 9: [pluginV2Builder.cpp::reportPluginError::23] Error Code 9: Internal Error (fMHCA_0: could not find any supported formats consistent with input/output data types)
+[E] 2: [builder.cpp::buildSerializedNetwork::751] Error Code 2: Internal Error (Assertion engine != nullptr failed. )
+[!] Invalid Engine. Please ensure the engine was built correctly
+Traceback (most recent call last):
+  File "demo-diffusion.py", line 487, in <module>
+    demo.loadEngines(args.engine_dir, args.onnx_dir, args.onnx_opset,
+  File "demo-diffusion.py", line 246, in loadEngines
+    engine.build(onnx_opt_path, fp16=True, \
+  File "/opt/TensorRT/demo/Diffusion/utilities.py", line 72, in build
+    engine = engine_from_network(network_from_onnx_path(onnx_path), config=CreateConfig(fp16=fp16, profiles=[p],
+  File "<string>", line 3, in func_impl
+  File "/usr/local/lib/python3.8/dist-packages/polygraphy/backend/base/loader.py", line 42, in __call__
+    return self.call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.8/dist-packages/polygraphy/backend/trt/loader.py", line 526, in call_impl
+    return engine_from_bytes(super().call_impl)
+  File "<string>", line 3, in func_impl
+  File "/usr/local/lib/python3.8/dist-packages/polygraphy/backend/base/loader.py", line 42, in __call__
+    return self.call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.8/dist-packages/polygraphy/backend/trt/loader.py", line 550, in call_impl
+    buffer, owns_buffer = util.invoke_if_callable(self._serialized_engine)
+  File "/usr/local/lib/python3.8/dist-packages/polygraphy/util/util.py", line 661, in invoke_if_callable
+    ret = func(*args, **kwargs)
+  File "/usr/local/lib/python3.8/dist-packages/polygraphy/backend/trt/loader.py", line 484, in call_impl
+    G_LOGGER.critical("Invalid Engine. Please ensure the engine was built correctly")
+  File "/usr/local/lib/python3.8/dist-packages/polygraphy/logger/logger.py", line 597, in critical
+    raise PolygraphyException(message) from None
+polygraphy.exception.exception.PolygraphyException: Invalid Engine. Please ensure the engine was built correctly
+root@jao02-jp511:/opt/TensorRT/demo/Diffusion#
+
