@@ -51,12 +51,12 @@ for run in range(args.runs + args.warmup):
         
     for image in args.images:
 
+        # pil_image = PIL.Image.open(image)
+        # predictor.set_image(pil_image)
+        pil_image = PIL.Image.fromarray(np.asarray(PIL.Image.open(image)))
+
         time_begin=time.perf_counter()
-
-        # Read image and run image encoder
-        pil_image = PIL.Image.open(image)
         predictor.set_image(pil_image)
-
         time_encoder=time.perf_counter() - time_begin
         
         print(f"{image}") 
