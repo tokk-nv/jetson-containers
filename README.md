@@ -11,6 +11,7 @@ Modular container build system that provides various [**AI/ML packages**](packag
 | **ML** | [`pytorch`](packages/pytorch) [`tensorflow`](packages/tensorflow) [`onnxruntime`](packages/onnxruntime) [`deepstream`](packages/deepstream) [`tritonserver`](packages/tritonserver) [`jupyterlab`](packages/jupyterlab) [`stable-diffusion`](packages/diffusion/stable-diffusion-webui) |
 | **LLM** | [`transformers`](packages/llm/transformers) [`text-generation-webui`](packages/llm/text-generation-webui) [`text-generation-inference`](packages/llm/text-generation-inference) [`llava`](packages/llm/llava) [`llama.cpp`](packages/llm/llama_cpp) [`exllama`](packages/llm/exllama) [`awq`](packages/llm/awq) [`AutoGPTQ`](packages/llm/auto_gptq) [`GPTQ-for-LLaMa`](packages/llm/gptq-for-llama) [`MiniGPT-4`](packages/llm/minigpt4) [`langchain`](packages/llm/langchain) [`optimum`](packages/llm/optimum) [`bitsandbytes`](packages/llm/bitsandbytes) [`nemo`](packages/nemo) [`riva`](packages/riva-client) |
 | **L4T** | [`l4t-pytorch`](packages/l4t/l4t-pytorch) [`l4t-tensorflow`](packages/l4t/l4t-tensorflow) [`l4t-ml`](packages/l4t/l4t-ml) [`l4t-diffusion`](packages/l4t/l4t-diffusion) [`l4t-text-generation`](packages/l4t/l4t-text-generation) |
+| **VIT** | [`Track Anything (TAM)`](packages/vit/tam) [`Segment Anything (SAM)`](packages/vit/sam) [`NanoSAM`](packages/vit/nanosam) |
 | **CUDA** | [`cupy`](packages/cupy) [`cuda-python`](packages/cuda-python) [`pycuda`](packages/pycuda) [`numba`](packages/numba) [`cudf`](packages/rapids/cudf) [`cuml`](packages/rapids/cuml) |
 | **Robotics** | [`ros`](packages/ros) [`ros2`](packages/ros) [`opencv:cuda`](packages/opencv) [`realsense`](packages/realsense) [`zed`](packages/zed) |
 
@@ -34,13 +35,15 @@ If you look at any package's readme (like [`l4t-pytorch`](packages/l4t/l4t-pytor
 
 ## Documentation
 
+<a href="https://nvidia-ai-iot.github.io/jetson-generative-ai-playground/"><img align="right" width="200" height="200" src="https://nvidia-ai-iot.github.io/jetson-generative-ai-playground/images/JON_Gen-AI-panels.png"></a>
+
 * [Package List](/packages)
 * [Package Definitions](/docs/packages.md)
 * [System Setup](/docs/setup.md)
 * [Building Containers](/docs/build.md)
 * [Running Containers](/docs/run.md)
 
-Looking for the old jetson-containers?   See the [`legacy`](https://github.com/dusty-nv/jetson-containers/tree/legacy) branch
+Check out the tutorials on the [**Jetson Generative AI Playground**](https://nvidia-ai-iot.github.io/jetson-generative-ai-playground)!
 
 ## Getting Started
 
@@ -60,5 +63,5 @@ Or you can manually run a [container image](https://hub.docker.com/r/dustynv) of
 sudo docker run --runtime nvidia -it --rm --network=host dustynv/l4t-pytorch:r35.4.1
 ```
 
-Check out the tutorials on the [**Jetson Generative AI Playground**](https://nvidia-ai-iot.github.io/jetson-generative-ai-playground)!
+Looking for the old jetson-containers?   See the [`legacy`](https://github.com/dusty-nv/jetson-containers/tree/legacy) branch.
 
