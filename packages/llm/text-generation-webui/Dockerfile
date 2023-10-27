@@ -13,25 +13,25 @@ WORKDIR /opt
 # force rebuild on new commits
 ADD https://api.github.com/repos/oobabooga/text-generation-webui/git/refs/heads/main /tmp/oobabooga_version.json
 
-RUN git clone --depth=1 https://github.com/oobabooga/text-generation-webui
+RUN git clone --depth=1 --branch snapshot-2023-10-22 https://github.com/oobabooga/text-generation-webui
+
+# RUN cd text-generation-webui && \
+#     git remote add llava2 https://github.com/haotian-liu/text-generation-webui && \
+#     git fetch llava2 && \
+#     git config user.email "dustinf@nvidia.com" && \
+#     git config user.name "Dustin Franklin" && \
+#     git cherry-pick 9c085ee
 
 RUN cd text-generation-webui && \
-    git remote add llava2 https://github.com/haotian-liu/text-generation-webui && \
-    git fetch llava2 && \
-    git config user.email "dustinf@nvidia.com" && \
-    git config user.name "Dustin Franklin" && \
-    git cherry-pick 9c085ee
-
-RUN cd text-generation-webui && \
-    #sed 's|^numpy.*|numpy|g' -i requirements.txt && \
+    sed 's|^numpy.*||g' -i requirements.txt && \
     #sed 's|^accelerate.*|accelerate|g' -i requirements.txt && \
-    sed 's|^bitsandbytes.*|bitsandbytes|g' -i requirements.txt && \
+    sed 's|^bitsandbytes.*||g' -i requirements.txt && \
     #sed 's|^fastapi.*|fastapi|g' -i requirements.txt && \
     #sed 's|^safetensors.*|safetensors|g' -i requirements.txt && \
     sed 's|^llama-cpp-python.*|llama-cpp-python|g' -i requirements.txt && \
     sed 's|^exllamav2.*|exllamav2|g' -i requirements.txt && \
     sed 's|^autoawq.*||g' -i requirements.txt && \
-    #sed 's|^transformers.*|transformers|g' -i requirements.txt && \
+    sed 's|^transformers.*||g' -i requirements.txt && \
     #sed 's|^optimum.*|optimum|g' -i requirements.txt && \
     #sed 's|^pydantic.*|pydantic|g' -i requirements.txt && \
     #sed 's|^aiofiles.*|aiofiles|g' -i requirements.txt && \
@@ -75,6 +75,8 @@ RUN git clone --depth=1 https://github.com/oobabooga/torch-grammar && \
 ENV LD_PRELOAD=${LD_PRELOAD}:/usr/local/lib/python3.8/dist-packages/sklearn/__check_build/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
 
 COPY settings.json text-generation-webui/
+
+RUN python3 -c 'import torch; print(f"PyTorch version: {torch.__version__}"); print(f"CUDA available:  {torch.cuda.is_available()}"); print(f"cuDNN version:   {torch.backends.cudnn.version()}"); print(f"torch.distributed:   {torch.distributed.is_available()}"); print(torch.__config__.show());'
 
 WORKDIR /
 
