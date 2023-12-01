@@ -13,4 +13,4 @@ WORKDIR /opt/
 RUN echo "\e[42m Install jetcam \e[0m"
 RUN git clone https://github.com/NVIDIA-AI-IOT/jetcam && \
     cd jetcam && \
-    python3 setup.py install
+    pip3 install .
