@@ -9,8 +9,8 @@ FROM ${BASE_IMAGE}
 
 WORKDIR /opt/
 
-# Install jetcam
+# Install jetracer
 RUN echo "\e[42m Install jetracer \e[0m"
 RUN git clone https://github.com/NVIDIA-AI-IOT/jetracer && \
-    cd jetcam && \
+    cd jetracer && \
     pip3 install .
