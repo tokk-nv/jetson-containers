@@ -39,8 +39,22 @@ def get_l4t_version(version_file='/etc/nv_tegra_release'):
         return Version(os.environ['L4T_VERSION'].lower().lstrip('r'))
         
     if not os.path.isfile(version_file):
-        raise IOError(f"L4T_VERSION file doesn't exist:  {version_file}")
-        
+        # In case only the CUDA runtime is installed
+        so_file_path = "/usr/local/cuda/targets/aarch64-linux/lib/libcudart.so.*.*.*"
+        files = glob.glob(so_file_path)
+        if files:
+            file_path = files[0]  # Assuming there is only one matching file
+            version_match = re.search(r'libcudart\.so\.(\d+\.\d+\.\d+)', file_path)
+
+            if version_match:
+                version_number = version_match.group(1)
+                return version_number
+            else:
+                print("Unable to extract version number.")
+        else:
+            #raise IOError(f"L4T_VERSION file doesn't exist:  {version_file}")
+            return "0.0.0"    
+
     with open(version_file) as file:
         line = file.readline()
         
