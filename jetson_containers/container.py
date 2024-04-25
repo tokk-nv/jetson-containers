@@ -10,6 +10,7 @@ import logging
 import traceback
 import subprocess
 import dockerhub_api 
+from tqdm import tqdm
 
 from .packages import find_package, find_packages, resolve_dependencies, validate_dict, _PACKAGE_ROOT
 from .l4t_version import L4T_VERSION, l4t_version_from_tag, l4t_version_compatible, get_l4t_base
@@ -93,7 +94,9 @@ def build_container(name, packages, base=get_l4t_base(), build_flags='', simulat
         name += f"{':' if tag_idx < 0 else '-'}{postfix}"
 
     # build chain of all packages
-    for idx, package in enumerate(packages):
+    #for idx, package in enumerate(packages):
+    for package in tqdm(packages, desc="Building containers in stage", unit="item", colour='blue'):
+
         # tag this build stage with the sub-package
         container_name = f"{name}-{package.replace(':','_')}"
 
@@ -132,15 +135,23 @@ def build_container(name, packages, base=get_l4t_base(), build_flags='', simulat
             cmd += pkg['path'] + _NEWLINE_ #" . "
             cmd += f"2>&1 | tee {log_file + '.txt'}" + "; exit ${PIPESTATUS[0]}"  # non-tee version:  https://stackoverflow.com/a/34604684
             
-            print(f"-- Building container {container_name}")
-            print(f"\n{cmd}\n")
+            tqdm.write(f"-- Building container {container_name}")
+            tqdm.write(f"\n{cmd}\n")
 
             with open(log_file + '.sh', 'w') as cmd_file:   # save the build command to a shell script for future reference
                 cmd_file.write('#!/usr/bin/env bash\n\n')
                 cmd_file.write(cmd + '\n')
                     
             if not simulate:  # remove the line breaks that were added for readability, and set the shell to bash so we can use $PIPESTATUS 
-                status = subprocess.run(cmd.replace(_NEWLINE_, ' '), executable='/bin/bash', shell=True, check=True)  
+                # status = subprocess.run(cmd.replace(_NEWLINE_, ' '), executable='/bin/bash', shell=True, check=True)  
+                proc = subprocess.Popen(cmd.replace(_NEWLINE_, ' '), executable='/bin/bash', shell=True, stdout=subprocess.PIPE)
+                # tqdm.write(s.stdout.readline().decode("utf-8"))
+                while True:
+                    line = proc.stdout.readline()
+                    if not line:
+                        break
+                    #the real code does filtering here
+                    tqdm.write(line.rstrip().decode("utf-8"))
         else:
             tag_container(base, container_name, simulate)
             
@@ -311,15 +322,23 @@ def test_container(name, package, simulate=False):
         cmd += "'" + _NEWLINE_
         cmd += f"2>&1 | tee {log_file + '.txt'}" + "; exit ${PIPESTATUS[0]}"
                 
-        print(f"-- Testing container {name} ({package['name']}/{test})")
-        print(f"\n{cmd}\n")
+        tqdm.write(f"-- Testing container {name} ({package['name']}/{test})")
+        tqdm.write(f"\n{cmd}\n")
         
         with open(log_file + '.sh', 'w') as cmd_file:
             cmd_file.write('#!/usr/bin/env bash\n\n')
             cmd_file.write(cmd + '\n')
             
         if not simulate:  # TODO: return false on errors 
-            status = subprocess.run(cmd.replace(_NEWLINE_, ' '), executable='/bin/bash', shell=True, check=True)
+            # status = subprocess.run(cmd.replace(_NEWLINE_, ' '), executable='/bin/bash', shell=True, check=True)
+            proc = subprocess.Popen(cmd.replace(_NEWLINE_, ' '), executable='/bin/bash', shell=True, stdout=subprocess.PIPE)
+            # tqdm.write(s.stdout.readline().decode("utf-8"))
+            while True:
+                line = proc.stdout.readline()
+                if not line:
+                    break
+                #the real code does filtering here
+                tqdm.write(line.rstrip().decode("utf-8"))
             
     return True
     
