@@ -1,7 +1,7 @@
 #---
 # name: localgpt
 # group: rag
-# depends: [langchain, huggingface_hub, transformers, autoawq, protobuf, bitsandbytes, llama_cpp]
+# depends: [langchain, huggingface_hub, transformers, auto_awq, protobuf, bitsandbytes, llama_cpp]
 # requires: '>=34.1.0'
 # docs: docs.md
 #---
