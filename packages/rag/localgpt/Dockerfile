@@ -25,7 +25,7 @@ RUN cd /opt && \
     cat requirements.txt
 RUN pip3 list
 # RUN cd /opt/localGPT && \
-#     pip3 install -r requirements.txt  && \
+#     pip3 install --ignore-installed -r requirements.txt  && \
 #     pip3 list
 # RUN cd /opt/localGPT && \ 
 #     pip3 install -e .
