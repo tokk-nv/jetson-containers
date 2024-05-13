@@ -1,7 +1,7 @@
 #---
 # name: jetbot
 # group: hardware
-# depends: [jupyter_clickable_image_widget, oled]
+# depends: [build-essential, pytorch, torchvision, jupyter_clickable_image_widget, oled]
 # notes: https://github.com/NVIDIA-AI-IOT/jetbot/
 #---
 ARG BASE_IMAGE
@@ -20,6 +20,33 @@ RUN apt-get update && \
     apt-get clean
 
 WORKDIR /opt
+
+# ====================
+# From `build-essential` package
+# ====================
+# RUN apt-get update \
+#     && apt-get install -y --no-install-recommends \
+#         build-essential \
+#         software-properties-common \
+#         apt-transport-https \
+#         ca-certificates \
+#         lsb-release \
+#         pkg-config \
+#         gnupg \
+#         git \
+#         gdb \
+#         wget \
+#         curl \
+#         nano \
+#         zip \
+#         unzip \
+#         time \
+#         sshpass \
+#         ssh-client \
+#     && apt-get clean \
+#     && rm -rf /var/lib/apt/lists/*
+RUN gcc --version \
+    && g++ --version
 
 # ==============
 # INSTALL JETBOT
