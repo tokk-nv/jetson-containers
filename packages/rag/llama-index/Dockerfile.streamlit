@@ -20,4 +20,5 @@ RUN pip install \
 WORKDIR /opt/streamlit
 
 CMD /start_ollama && \
+    JUPYTER_ROOT=/opt/streamlit /start_jupyter && \
     /bin/bash

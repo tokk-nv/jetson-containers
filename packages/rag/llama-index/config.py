@@ -11,7 +11,7 @@ streamlit = package.copy()
 
 streamlit['name'] = 'llama-index:streamlit'
 streamlit['dockerfile'] = 'Dockerfile.streamlit'
-streamlit['depends'] = ['llama-index:main', 'ollama']
+streamlit['depends'] = ['llama-index:main', 'jupyterlab:myst', 'ollama']
 
 del streamlit['alias']
 
