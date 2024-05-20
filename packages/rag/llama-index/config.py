@@ -7,4 +7,12 @@ samples['depends'] = ['llama-index:main', 'jupyterlab:myst', 'ollama']
 
 del samples['alias']
 
-package = [package, samples]
+streamlit = package.copy()
+
+streamlit['name'] = 'llama-index:streamlit'
+streamlit['dockerfile'] = 'Dockerfile.streamlit'
+streamlit['depends'] = ['llama-index:main', 'ollama']
+
+del streamlit['alias']
+
+package = [package, samples, streamlit]
