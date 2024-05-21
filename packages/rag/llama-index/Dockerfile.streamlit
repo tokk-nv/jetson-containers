@@ -19,6 +19,8 @@ RUN pip install \
 
 WORKDIR /opt/streamlit
 
+COPY samples/*.ipynb /opt/streamlit/notebooks/
+
 CMD /start_ollama && \
     JUPYTER_ROOT=/opt/streamlit /start_jupyter && \
     /bin/bash
