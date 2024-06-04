@@ -59,6 +59,7 @@ RUN cd ${JETBOT_REPO_DIR} && \
 
 RUN ls -la /
 
+ENV JUPYTER_ROOT=/opt/jetbot/notebooks
 
 CMD /start_jupyter && /start_oled_server && /bin/bash
 # CMD /bin/bash
