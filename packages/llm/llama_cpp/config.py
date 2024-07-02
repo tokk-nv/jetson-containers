@@ -17,12 +17,19 @@ def llama_cpp(version, branch=None, test=None, default=False):
         
     pkg['build_args'] = {
         'LLAMA_CPP_VERSION': version,
-        'LLAMA_CPP_BRANCH': branch,
+        'LLAMA_CPP_BRANCH': branch
     }
     
     return pkg
 
+samples = llama_cpp('0.2.70', default=True).copy()
+samples['name'] = 'llama_cpp:samples'
+samples['depends'] = ['transformers', 'protobuf:cpp', 'ollama', 'jupyterlab:myst']
+samples['dockerfile'] = 'Dockerfile.samples'
+del samples['alias']
+
 package = [
     llama_cpp('0.2.57'),
     llama_cpp('0.2.70', default=True),
+    samples,
 ]
