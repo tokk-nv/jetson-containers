@@ -26,6 +26,9 @@ import sys
 import pprint
 import argparse
 
+from colorama import Fore, Back, Style
+import curses
+
 from jetson_containers import (build_container, build_containers, find_packages, package_search_dirs, set_log_dir, 
                                L4T_VERSION, JETPACK_VERSION, CUDA_VERSION, PYTHON_VERSION, LSB_RELEASE, LSB_CODENAME)
 
@@ -100,6 +103,7 @@ if args.list_packages or args.show_packages:
 # build one multi-stage container from chain of packages
 # or launch multiple independent container builds
 if not args.multiple:
-    build_container(args.name, args.packages, args.base, args.build_flags, args.simulate, args.skip_tests, args.test_only, args.push, args.no_github_api)
+    curses.wrapper(lambda stdscr: build_container(args.name, args.packages, args.base, args.build_flags, args.simulate, args.skip_tests, args.test_only, args.push, args.no_github_api, stdscr=stdscr))
+    #build_container(args.name, args.packages, args.base, args.build_flags, args.simulate, args.skip_tests, args.test_only, args.push, args.no_github_api)
 else:   
     build_containers(args.name, args.packages, args.base, args.build_flags, args.simulate, args.skip_errors, args.skip_packages, args.skip_tests, args.test_only, args.push)

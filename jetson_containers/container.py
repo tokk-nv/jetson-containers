@@ -18,11 +18,15 @@ from .logging import log_dir, log_debug, pprint_debug
 
 from packaging.version import Version
 
+from colorama import init as colorama_init
+from colorama import Fore, Back, Style
+import culour
+import curses
 
 _NEWLINE_=" \\\n"  # used when building command strings
 
 
-def build_container(name, packages, base=get_l4t_base(), build_flags='', simulate=False, skip_tests=[], test_only=[], push='', no_github_api=False):
+def build_container(name, packages, base=get_l4t_base(), build_flags='', simulate=False, skip_tests=[], test_only=[], push='', no_github_api=False, stdscr=None):
     """
     Multi-stage container build that chains together selected packages into one container image.
     For example, `['pytorch', 'tensorflow']` would build a container that had both pytorch and tensorflow in it.
@@ -64,8 +68,30 @@ def build_container(name, packages, base=get_l4t_base(), build_flags='', simulat
         
     # add all dependencies to the build tree
     packages = resolve_dependencies(packages)
-    print('-- Building containers ', packages)
+    num_stages = len(packages)
+    print(f"-- Building {num_stages} containers {packages}")
     
+    if stdscr:
+        stdscr.clear()
+        curses.curs_set(0)  # Hide cursor
+
+        colorama_init()
+
+        # Get the dimensions of the terminal
+        height, width = stdscr.getmaxyx()
+
+        # Reserved lines for output
+        output_start_line = 2
+        output_end_line = height - 3
+            
+        # Set the scroll region to the designated output area
+        stdscr.scrollok(True)  # Enable scrolling
+        stdscr.setscrreg(output_start_line, output_end_line)
+
+    else:
+        print(f"No, stdscr is NOT supplied")
+
+
     # make sure all packages can be found before building any
     for package in packages:    
         find_package(package)
@@ -132,15 +158,42 @@ def build_container(name, packages, base=get_l4t_base(), build_flags='', simulat
             cmd += pkg['path'] + _NEWLINE_ #" . "
             cmd += f"2>&1 | tee {log_file + '.txt'}" + "; exit ${PIPESTATUS[0]}"  # non-tee version:  https://stackoverflow.com/a/34604684
             
-            print(f"-- Building container {container_name}")
-            print(f"\n{cmd}\n")
+            # print(f"-- Building container {container_name}")
+            # print(f"\n{cmd}\n")
+
+            # Display current stage
+            culour.addstr(stdscr, 0, 0, f"\033[95m -- Building container {container_name} \033[0m")
 
             with open(log_file + '.sh', 'w') as cmd_file:   # save the build command to a shell script for future reference
                 cmd_file.write('#!/usr/bin/env bash\n\n')
                 cmd_file.write(cmd + '\n')
                     
             if not simulate:  # remove the line breaks that were added for readability, and set the shell to bash so we can use $PIPESTATUS 
-                status = subprocess.run(cmd.replace(_NEWLINE_, ' '), executable='/bin/bash', shell=True, check=True)  
+                
+                # Display progress bar
+                progress = int((idx + 1) / num_stages * 100)
+                progress_bar = '\x1b[92m' + f"Progress {idx+1}/{num_stages}: [{'#' * progress:<100}] {progress}%" + '\x1b[0m'
+
+                # Calculate the position of the bottom line
+                #stdscr.addstr(height - 1, 0, progress_bar[:width])
+                culour.addstr(stdscr, height - 1, 0, progress_bar[:width])
+                stdscr.refresh()
+                    
+                #status = subprocess.run(cmd.replace(_NEWLINE_, ' '), executable='/bin/bash', shell=True, check=True)
+                process = subprocess.Popen(cmd.replace(_NEWLINE_, ' '), executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+                # Read output from the command in real-time
+                output_line = output_start_line
+                for line in iter(process.stdout.readline, b''):
+                    if output_line > output_end_line:
+                        # Scroll up the output if it exceeds the designated area
+                        stdscr.scroll(1)
+                        output_line -= 1
+                    
+                    #stdscr.addstr(output_line, 0, line.decode().strip()[:width])
+                    culour.addstr(stdscr, output_line, 0, line.decode().strip()[:width])
+                    output_line += 1
+                    stdscr.refresh()
         else:
             tag_container(base, container_name, simulate)
             
@@ -151,6 +204,10 @@ def build_container(name, packages, base=get_l4t_base(), build_flags='', simulat
         
         # use this container as the next base
         base = container_name
+
+        # Clear remaining lines before the next stage
+        for line in range(output_line, output_end_line + 1):
+            stdscr.addstr(line, 0, " " * width)
 
     # tag the final container
     tag_container(container_name, name, simulate)
@@ -165,7 +222,12 @@ def build_container(name, packages, base=get_l4t_base(), build_flags='', simulat
     if push:
         push_container(name, push, simulate)
      
-    print(f"-- Done building container {name}")        
+    if stdscr:
+        stdscr.addstr(0, 0, "Docker build completed successfully! Press any key to exit.")
+        stdscr.refresh()
+        stdscr.getch()
+    else:
+        print(f"-- Done building container {name}")        
     return name
     
     
@@ -203,7 +265,8 @@ def build_containers(name, packages, base=get_l4t_base(), build_flags='', simula
 
     for package in packages:
         try:
-            container_name = build_container(name, package, base, build_flags, simulate, skip_tests, test_only, push) 
+            curses.wrapper(lambda stdscr: build_container(name, package, base, build_flags, simulate, skip_tests, test_only, push, stdscr=stdscr))
+            #container_name = build_container(name, package, base, build_flags, simulate, skip_tests, test_only, push) 
         except Exception as error:
             print(error)
             if not skip_errors:
@@ -530,7 +593,8 @@ def find_container(package, prefer_sources=['local', 'registry', 'build'], disab
         
         elif source == 'build':
             if not quiet and query_yes_no(f"\nCouldn't find a compatible container for {package}, would you like to build it?"):
-                return build_container('', package) #, simulate=True)
+                return curses.wrapper(lambda stdscr: build_container('', package, stdscr=stdscr))
+                #return build_container('', package) #, simulate=True)
 
     # compatible container image could not be found
     return None
