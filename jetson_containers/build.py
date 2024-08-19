@@ -54,7 +54,9 @@ parser.add_argument('--simulate', action='store_true', help="print out the build
 parser.add_argument('--push', type=str, default='', help="repo or user to push built container image to (no push by default)")
 parser.add_argument('--logs', type=str, default='', help="sets the directory to save container build logs to (default: jetson-containers/logs)")
 parser.add_argument('--verbose', action='store_true', help="enable verbose/debug logging")
+
 parser.add_argument('--no-github-api', action='store_true', help="disalbe Github API use to force rebuild on new git commits")
+parser.add_argument('--progress', action='store_true', help="show the progress bar for human moniotring")
 
 args = parser.parse_args()
 
@@ -103,7 +105,11 @@ if args.list_packages or args.show_packages:
 # build one multi-stage container from chain of packages
 # or launch multiple independent container builds
 if not args.multiple:
-    curses.wrapper(lambda stdscr: build_container(args.name, args.packages, args.base, args.build_flags, args.simulate, args.skip_tests, args.test_only, args.push, args.no_github_api, stdscr=stdscr))
-    #build_container(args.name, args.packages, args.base, args.build_flags, args.simulate, args.skip_tests, args.test_only, args.push, args.no_github_api)
+    print("### build_container():")
+    if args.progress:
+        curses.wrapper(lambda stdscr: build_container(args.name, args.packages, args.base, args.build_flags, args.simulate, args.skip_tests, args.test_only, args.push, args.no_github_api, args.progress, stdscr=stdscr))
+    else:
+        build_container(args.name, args.packages, args.base, args.build_flags, args.simulate, args.skip_tests, args.test_only, args.push, args.no_github_api, args.progress)
+
 else:   
     build_containers(args.name, args.packages, args.base, args.build_flags, args.simulate, args.skip_errors, args.skip_packages, args.skip_tests, args.test_only, args.push)
