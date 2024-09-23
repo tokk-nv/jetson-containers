@@ -37,6 +37,7 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output', type=str, default='/tmp/autotag', help="file to save the selected container tag to")
     parser.add_argument('-q', '--quiet', action='store_true', help="use the default unattended options instead of prompting the user")
     parser.add_argument('-v', '--verbose', action='store_true', help="log extra info like the registry repository manifests")
+    parser.add_argument('-c', '--registry_cache', type=str, default='on,off', help="use of local cache for Docker Hub registry")
 
     args = parser.parse_args()
     

@@ -177,11 +177,25 @@ def build_container(name, packages, base=get_l4t_base(), build_flags='', simulat
                 if stdscr:
                     # Display progress bar
                     progress_percent = int((idx + 1) / num_stages * 100)
-                    progress_bar = '\x1b[92m' + f"Progress {idx+1}/{num_stages}: [{'#' * progress_percent:<100}] {progress_percent}%" + '\x1b[0m'
+                    progress_bar = '\x1b[96m' + f"{idx+1}/{num_stages} | \x1b[0m"
+                    
+                    for i, pac in enumerate(packages):  
+                        if i != len(packages)-1:
+                            # Not last item
+                            if i != idx:
+                                progress_bar = f"{progress_bar} {pac} >>"
+                            else:
+                                progress_bar = f"{progress_bar} \x1b[0m\x1b[95m*{pac}*\x1b[0m >>"
+                        else:
+                            # Last item
+                            if i != idx:
+                                progress_bar = f"{progress_bar} {pac} \x1b[0m"
+                            else:
+                                progress_bar = f"{progress_bar} \x1b[0m\x1b[95m*{pac}* \x1b[0m"
 
                     # Calculate the position of the bottom line
                     #stdscr.addstr(height - 1, 0, progress_bar[:width])
-                    culour.addstr(stdscr, height - 1, 0, progress_bar[:width])
+                    culour.addstr(stdscr, height - 1, 0, progress_bar)
                     stdscr.refresh()
                         
                     #status = subprocess.run(cmd.replace(_NEWLINE_, ' '), executable='/bin/bash', shell=True, check=True)
@@ -194,10 +208,15 @@ def build_container(name, packages, base=get_l4t_base(), build_flags='', simulat
                             # Scroll up the output if it exceeds the designated area
                             stdscr.scroll(1)
                             output_line -= 1
+                            # culour.addstr(stdscr, 0, 0, f"\033[95m -- Building container {container_name} \033[0m")
+                            # culour.addstr(stdscr, height - 1, 0, progress_bar)
+                            # stdscr.refresh()
                         
                         #stdscr.addstr(output_line, 0, line.decode().strip()[:width])
                         culour.addstr(stdscr, output_line, 0, line.decode().strip()[:width])
                         output_line += 1
+                        culour.addstr(stdscr, 0, 0, f"\x1b[95m -- Building container {container_name} \x1b[0m")
+                        # culour.addstr(stdscr, height - 1, 0, progress_bar)
                         stdscr.refresh()
                 else:
                     status = subprocess.run(cmd.replace(_NEWLINE_, ' '), executable='/bin/bash', shell=True, check=True)
@@ -456,10 +475,14 @@ def get_registry_containers(user='dustynv', **kwargs):
     cache_enabled = (cache_path != "0" and cache_path.lower() != "off")
 
     if cache_enabled and os.path.isfile(cache_path):
+        print("######################## cache_enabled ###########################")
         if time.time() - os.path.getmtime(cache_path) > 600 and os.geteuid() != 0:
+            print(f"{time.time()} - {os.path.getmtime(cache_path)} = {time.time() - os.path.getmtime(cache_path)}")
             cmd = f"cd {_PACKAGE_ROOT} && git fetch origin dev --quiet && git checkout --quiet origin/dev -- {os.path.relpath(cache_path, _PACKAGE_ROOT)}"
+            print(f">>> {cmd}")
             status = subprocess.run(cmd, executable='/bin/bash', shell=True, check=False)
             if status.returncode != 0:
+                print(f"failed to update container registry cache from GitHub ({cache_path})")
                 logging.error(f'failed to update container registry cache from GitHub ({cache_path})')
                 logging.error(f'return code {status.returncode} > {cmd}')
                 
@@ -533,30 +556,42 @@ def find_registry_containers(package, check_l4t_version=True, return_dicts=False
     if isinstance(package, dict):
         package = package['name']
     
+    print(f">>> package : {package}")
     namespace, repo, tag = split_container_name(package)
     registry_repos = get_registry_containers(**kwargs)
     pprint_debug(registry_repos)
 
     found_containers = []
+    # print(f"### registry_repos: {registry_repos}")
+    print(f"### num of registry_repos:      {len(registry_repos)}")
     
     for registry_repo in registry_repos:
         if registry_repo['name'] != repo:
+            print(f"| registry_repo['name'] : {registry_repo['name'] }  ---> continue")
             continue
         
         repo_copy = copy.deepcopy(registry_repo)
         repo_copy['tags'] = []
         
         for registry_image in registry_repo['tags']:
+            print(f"| tag                    : {tag}")
+            print(f"| registry_image['name'] : {registry_image['name']}")
+            print(f"| tag : {tag}")
             if tag and not (tag == registry_image['name'] or fnmatch.fnmatch(registry_image['name'], tag + '-*')):
+                print("*** if tag and not (tag == registry_image['name'] or fnmatch.fnmatch(registry_image['name'], tag + '-*')):")
+                print(" ---> continue")
                 continue
             
             if check_l4t_version:
                 if not l4t_version_compatible(l4t_version_from_tag(registry_image['name']), **kwargs):
+                    print("*** if not l4t_version_compatible(l4t_version_from_tag(registry_image['name']), **kwargs):")
+                    print(" ---> continue")
                     continue
             
             repo_copy['tags'].append(copy.deepcopy(registry_image))
             
             if not return_dicts:
+                print("*** if not return_dicts:")
                 found_containers.append(
                     f"{registry_repo['namespace']}/{registry_repo['name']}:{registry_image['name']}"
                 )
@@ -564,6 +599,8 @@ def find_registry_containers(package, check_l4t_version=True, return_dicts=False
         if return_dicts and len(repo_copy['tags']) > 0:
             found_containers.append(repo_copy)
             
+    print(f"### found_containers: {found_containers}")
+    print(f"### num of tags:      {len(found_containers[0]['tags'])}")
     return found_containers
     
             
@@ -594,6 +631,9 @@ def find_container(package, prefer_sources=['local', 'registry', 'build'], disab
             
             if len(registry_images) > 0:
                 img = registry_images[0]  # TODO allow use to select image if there are multiple candidates
+                #print(f"#### Available images: {registry_images}")
+                for i, tag in enumerate(registry_images[0]['tags']):
+                    print(f"[{i}]: {tag['name']}, {tag['tag_last_pushed']}")
                 img_tag = img['tags'][0]
                 img_name = f"{img['namespace']}/{img['name']}:{img_tag['name']}"
                 if quiet or query_yes_no(f"\nFound compatible container {img_name} ({img_tag['tag_last_pushed'][:10]}, {img_tag['full_size']/(1024**3):.1f}GB) - would you like to pull it?", default="yes"):
