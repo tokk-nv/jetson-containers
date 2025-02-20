@@ -14,26 +14,26 @@ def check_dependencies(install=True):
         import yaml
         import wget
         import dockerhub_api
-        
+
         from packaging.version import Version
-        
+
         x = Version('1.2.3') # check that .major, .minor, .micro are available
         x = x.major          # (these are in packaging>=20.0)
-        
+
     except Exception as error:
         if not install:
             raise error
-            
+
         import os
         import sys
         import subprocess
-        
+
         requirements = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'requirements.txt')
         cmd = [sys.executable, '-m', 'pip', 'install', '-r', requirements]
-        
+
         print('-- Installing required packages:', cmd)
         subprocess.run(cmd, shell=False, check=True)
-        
+
 
 def query_yes_no(question, default="no"):
     """
@@ -45,7 +45,7 @@ def query_yes_no(question, default="no"):
             an answer is required of the user).
 
     The "answer" return value is True for "yes" or False for "no".
-    
+
     """
     valid = {"yes": True, "y": True, "ye": True, "no": False, "n": False}
     if default is None:
@@ -78,19 +78,19 @@ def split_container_name(name):
     repo = parts[0]
     namespace = ''
     tag = ''
-    
+
     if len(parts) == 2:
         tag = parts[1]
-        
+
     parts = repo.split('/')
-    
+
     if len(parts) == 2:
         namespace = parts[0]
         repo = parts[1]
-        
+
     return namespace, repo, tag
-    
-    
+
+
 def user_in_group(group):
     """
     Returns true if the user running the current process is in the specified user group.
@@ -100,17 +100,17 @@ def user_in_group(group):
         group = grp.getgrnam(group)
     except KeyError:
         return False
-        
+
     return (group.gr_gid in os.getgroups())
-  
+
 
 def is_root_user():
     """
     Returns true if this is the root user running
     """
     return os.geteuid() == 0
-    
-    
+
+
 def needs_sudo(group='docker'):
     """
     Returns true if sudo is needed to use the docker engine (if user isn't in the docker group)
@@ -119,7 +119,7 @@ def needs_sudo(group='docker'):
         return False
     else:
         return not user_in_group(group)
-    
+
 
 def sudo_prefix(group='docker'):
     """
@@ -140,11 +140,12 @@ def handle_text_request(url) -> str | None:
         url (str): The URL from which to fetch text data.
 
     Returns:
-        str or None: The fetched text data, stripped of leading and trailing whitespace, 
+        str or None: The fetched text data, stripped of leading and trailing whitespace,
                      or None if an error occurs.
     """
     try:
         response = requests.get(url)
+        print(f"URL: {url}")
         if response.status_code == 200:
             return response.text.strip()
         else:
@@ -153,7 +154,7 @@ def handle_text_request(url) -> str | None:
     except Exception as e:
         print("An error occurred:", e)
         return None
-    
+
 
 def handle_json_request(url, headers=None):
     """
@@ -179,7 +180,7 @@ def handle_json_request(url, headers=None):
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         return None
-    
+
 
 def github_api(url):
     """
@@ -194,7 +195,7 @@ def github_api(url):
     github_token = os.environ.get('GITHUB_TOKEN')
     headers = {'Authorization': f'token {github_token}'} if github_token else None
     request_url = f'https://api.github.com/{url}'
-    
+
     return handle_json_request(request_url, headers)
 
 
@@ -245,7 +246,7 @@ def get_json_value_from_url(url, notation=None):
     if notation and data is not None:
         keys = notation.split('.') if '.' in notation else [notation]
         current = data
-        
+
         try:
             for key in keys:
                 current = current[key]
@@ -253,10 +254,10 @@ def get_json_value_from_url(url, notation=None):
         except KeyError as e:
             print(f'ERROR: Failed to get the value for {notation}: {e}')
             return None
-        
+
     return data
-    
-    
+
+
 def log_debug(*args, **kwargs):
     """
     Debug print function that only prints when VERBOSE or DEBUG environment variable is set
@@ -264,8 +265,8 @@ def log_debug(*args, **kwargs):
     """
     if os.environ.get('VERBOSE', False) or os.environ.get('DEBUG', False):
         print(*args, **kwargs)
-        
-        
+
+
 def pprint_debug(*args, **kwargs):
     """
     Debug print function that only prints when VERBOSE or DEBUG environment variable is set
@@ -273,4 +274,4 @@ def pprint_debug(*args, **kwargs):
     """
     if os.environ.get('VERBOSE', False) or os.environ.get('DEBUG', False):
         pprint.pprint(*args, **kwargs)
-        
+

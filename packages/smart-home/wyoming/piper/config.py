@@ -9,6 +9,7 @@ def create_package(version, branch=None, default=False) -> list:
     if not branch:
         branch = f'v{version}'
 
+    print(f">>> [piper] >>> wanted_version = handle_text_request(f'https://raw.githubusercontent.com/rhasspy/wyoming-piper/{branch}/wyoming_piper/VERSION')")
     wanted_version = handle_text_request(f'https://raw.githubusercontent.com/rhasspy/wyoming-piper/{branch}/wyoming_piper/VERSION')
 
     # FIXME: wyoming-piper on branch v1.5.2 has incorrect version set in VERSION file.

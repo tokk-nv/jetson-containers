@@ -7,6 +7,7 @@ def create_package(version, branch=None, default=False) -> list:
     if not branch:
         branch = f'v{version}'
 
+    print(f">>> [openwakeword] >>> wanted_version = handle_text_request(f'https://raw.githubusercontent.com/rhasspy/wyoming_openwakeword/{branch}/wyoming_openwakeword/VERSION')")
     wanted_version = handle_text_request(f'https://raw.githubusercontent.com/rhasspy/wyoming-openwakeword/{branch}/wyoming_openwakeword/VERSION')
     pkg['name'] = f'wyoming-openwakeword:{wanted_version}'
 

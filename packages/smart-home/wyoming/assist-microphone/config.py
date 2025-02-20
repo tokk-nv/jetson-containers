@@ -7,6 +7,7 @@ def create_package(version, branch=None, default=False) -> list:
     if not branch:
         branch = f'v{version}'
 
+    print(f">>> [assist-microphone] >>> wanted_version = handle_text_request(f'https://raw.githubusercontent.com/rhasspy/wyoming-satellite/{branch}/wyoming_satellite/VERSION')")
     wanted_version = handle_text_request(f'https://raw.githubusercontent.com/rhasspy/wyoming-satellite/{branch}/wyoming_satellite/VERSION')
     pkg['name'] = f'wyoming-assist-microphone:{wanted_version}'
 

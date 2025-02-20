@@ -8,6 +8,7 @@ def create_package(version, branch=None, default=False) -> list:
         branch = f'v{version}'
 
     url = f'https://raw.githubusercontent.com/rhasspy/wyoming-faster-whisper/{branch}/wyoming_faster_whisper/VERSION'
+    print(f">>> [wyoming-whisper] >>> wanted_version = handle_text_request({url})")
     wanted_version = handle_text_request(url)
     pkg['name'] = f'wyoming-whisper:{wanted_version}'
 
