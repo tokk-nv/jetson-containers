@@ -1,14 +1,15 @@
 #!/bin/bash
 
 LSB_RELEASE=24.04
-TARGET=lerobot
 LOG_DIR="./logs"
 REPEAT=1  # default number of times to repeat each combination
+TARGET="lerobot"  # default target
 
 # Allow override with --repeat=N
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --repeat=*) REPEAT="${1#*=}"; shift ;;
+        --target=*) TARGET="${1#*=}"; shift ;;
         *) echo "Unknown parameter: $1" && exit 1 ;;
     esac
 done
@@ -37,9 +38,9 @@ for build_net in "${BUILD_NETWORKS[@]}"; do
 
             LSB_RELEASE=$LSB_RELEASE \
             jetson-containers build \
-                --build-network=$build_net \
-                --test-network=$test_net \
-                $TARGET &>> "$LOG_FILE"
+                --build-network="$build_net" \
+                --test-network="$test_net" \
+                "$TARGET" 2>&1 | ts '[%Y-%m-%d %H:%M:%S]' >> "$LOG_FILE"
 
             EXIT_CODE=$?
             ((TOTAL_RUNS++))
