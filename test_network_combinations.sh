@@ -57,7 +57,7 @@ for build_net in "${BUILD_NETWORKS[@]}"; do
 
             # Clean up
             echo "Cleaning up Docker system..."
-            docker system prune -f -a
+            docker system prune -f -a > /dev/null 2>&1
 
         done
     done
