@@ -3,7 +3,11 @@
 runs=10
 success=0
 fail=0
+<<<<<<< HEAD
 LOG_DIR="./logs/test/"
+=======
+LOG_DIR="./logs"
+>>>>>>> d0da5d7f58a353375bf68187e18d6f0496b60dc2
 LOG_FILE="$LOG_DIR/build_list_test_$(date +%Y%m%d_%H%M%S).log"
 
 mkdir -p "$LOG_DIR"

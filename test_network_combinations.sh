@@ -1,21 +1,33 @@
 #!/bin/bash
 
 LSB_RELEASE=24.04
+<<<<<<< HEAD
 LOG_DIR="./logs/test/"
 REPEAT=1  # default number of times to repeat each combination
 TARGET="lerobot"  # default target
+=======
+TARGET=lerobot
+LOG_DIR="./logs"
+REPEAT=1  # default number of times to repeat each combination
+>>>>>>> d0da5d7f58a353375bf68187e18d6f0496b60dc2
 
 # Allow override with --repeat=N
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --repeat=*) REPEAT="${1#*=}"; shift ;;
+<<<<<<< HEAD
         --target=*) TARGET="${1#*=}"; shift ;;
+=======
+>>>>>>> d0da5d7f58a353375bf68187e18d6f0496b60dc2
         *) echo "Unknown parameter: $1" && exit 1 ;;
     esac
 done
 
+<<<<<<< HEAD
 SUMMARY_FILE="${LOG_DIR}/test_${TARGET}_$(date +%Y%m%d_%H%M%S).txt"
 
+=======
+>>>>>>> d0da5d7f58a353375bf68187e18d6f0496b60dc2
 mkdir -p "$LOG_DIR"
 
 BUILD_NETWORKS=("host" "bridge")
