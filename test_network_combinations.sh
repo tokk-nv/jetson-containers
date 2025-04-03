@@ -1,7 +1,7 @@
 #!/bin/bash
 
 LSB_RELEASE=24.04
-LOG_DIR="./logs"
+LOG_DIR="./logs/test/"
 REPEAT=1  # default number of times to repeat each combination
 TARGET="lerobot"  # default target
 
@@ -13,6 +13,8 @@ while [[ "$#" -gt 0 ]]; do
         *) echo "Unknown parameter: $1" && exit 1 ;;
     esac
 done
+
+SUMMARY_FILE="${LOG_DIR}/test_${TARGET}_$(date +%Y%m%d_%H%M%S).txt"
 
 mkdir -p "$LOG_DIR"
 
@@ -40,12 +42,12 @@ for build_net in "${BUILD_NETWORKS[@]}"; do
             jetson-containers build \
                 --build-network="$build_net" \
                 --test-network="$test_net" \
-                "$TARGET" 2>&1 | ts '[%Y-%m-%d %H:%M:%S]' >> "$LOG_FILE"
+                "$TARGET" 2>&1 | ts '[%H:%M:%S]' >> "$LOG_FILE"
 
-            EXIT_CODE=$?
+            BUILD_EXIT_CODE=${PIPESTATUS[0]}  # Capture actual return code
             ((TOTAL_RUNS++))
 
-            if [ $EXIT_CODE -eq 0 ]; then
+            if [ $BUILD_EXIT_CODE  -eq 0 ]; then
                 RESULT="✅ PASS"
                 ((PASS_COUNT++))
             else
@@ -54,6 +56,7 @@ for build_net in "${BUILD_NETWORKS[@]}"; do
             fi
 
             SUMMARY+=("$COMBO -> $RESULT")
+            echo "$COMBO -> $RESULT" >> "$SUMMARY_FILE"
             echo -e "\n$COMBO -> $RESULT\n" | tee -a "$LOG_FILE"
 
             # Clean up
@@ -65,12 +68,12 @@ for build_net in "${BUILD_NETWORKS[@]}"; do
 done
 
 # Summary report
-echo -e "\n\n========= SUMMARY ========="
-for line in "${SUMMARY[@]}"; do
-    echo "$line"
-done
-echo -e "===========================\n"
-echo "Total runs:   $TOTAL_RUNS"
-echo "✅ Passes:     $PASS_COUNT"
-echo "❌ Failures:   $FAIL_COUNT"
-echo -e "===========================\n"
+{
+  echo ""
+  echo "==========================="
+  echo "Total runs:   $TOTAL_RUNS"
+  echo "✅ Passes:     $PASS_COUNT"
+  echo "❌ Failures:   $FAIL_COUNT"
+  echo "==========================="
+  echo ""
+} | tee -a "$SUMMARY_FILE"
