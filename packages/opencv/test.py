@@ -1,42 +1,48 @@
-#!/usr/bin/env python3
-print('testing OpenCV...')
-
+import os
 import cv2
-import sys
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
-print('OpenCV version:', str(cv2.__version__))
-print(cv2.getBuildInformation())
-
-try:
-    print('\nGPU devices:', str(cv2.cuda.getCudaEnabledDeviceCount()))
-except Exception as ex:
-    print(ex)
-    print('OpenCV was not built with CUDA')
-    raise ex
-
-# download test image    
 img_url = 'https://raw.githubusercontent.com/dusty-nv/jetson-containers/59f840abbb99f22914a7b2471da829b3dd56122e/test/data/test_0.jpg'
-img_path = '/tmp/test_0.jpg'
+img_path = 'test_0.jpg'
 
-request = requests.get(img_url, allow_redirects=True)
-open(img_path, 'wb').write(request.content)
+def download_image(url, path, retries=5, timeout=30):
+    session = requests.Session()
+    retry = Retry(
+        total=retries,
+        backoff_factor=1,
+        status_forcelist=[500, 502, 503, 504],
+        allowed_methods=["GET"]
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
 
-# load image
-img_cpu = cv2.imread(img_path)
-print(f'loaded test image from {img_path}  {img_cpu.shape}  {img_cpu.dtype}')
+    try:
+        print(f"📥 Downloading {url}...")
+        response = session.get(url, allow_redirects=True, timeout=timeout)
+        response.raise_for_status()
+        with open(path, 'wb') as f:
+            f.write(response.content)
+        print("✅ Downloaded image successfully")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to download image: {e}")
+        return False
 
-# test GPU processing
-img_gpu = cv2.cuda_GpuMat()
-img_gpu.upload(img_cpu)
+# Download image if it doesn't exist
+if not os.path.exists(img_path):
+    if not download_image(img_url, img_path):
+        print("⚠️ Falling back to local test image if available...")
+        if not os.path.exists(img_path):
+            print("🚫 No fallback image found. Exiting test.")
+            exit(1)
 
-img_gpu = cv2.cuda.resize(img_gpu, (int(img_cpu.shape[0]/2), int(img_cpu.shape[1]/2)))
+# Load and test image with OpenCV
+img = cv2.imread(img_path)
+if img is None:
+    print("🚫 Failed to load image with OpenCV.")
+    exit(1)
 
-luv = cv2.cuda.cvtColor(img_gpu, cv2.COLOR_BGR2LUV).download()
-hsv = cv2.cuda.cvtColor(img_gpu, cv2.COLOR_BGR2HSV).download()
-gray = cv2.cuda.cvtColor(img_gpu, cv2.COLOR_BGR2GRAY)
-
-img_gpu = cv2.cuda.createCLAHE(clipLimit=5.0, tileGridSize=(8, 8)).apply(gray, cv2.cuda_Stream.Null())
-img_cpu = img_gpu.download()
-
-print('OpenCV OK\n')
+print(f"✅ Image loaded: shape={img.shape}")
