@@ -1,4 +1,3 @@
-
 import os
 from packaging.version import Version
 
@@ -22,7 +21,7 @@ def cuda_build_args(version):
 def cuda_package(version, url, deb=None, packages=None, requires=None) -> list:
     """
     Generate containers for a particular version of CUDA installed from debian packages
-    This will download & install the specified packages (by default the full CUDA Toolkit) 
+    This will download & install the specified packages (by default the full CUDA Toolkit)
     from a .deb URL from developer.nvidia.com/cuda-downloads (the `aarch64-jetson` versions)
     """
     if not deb:
@@ -161,6 +160,9 @@ def pip_cache(version, requires=None):
         'SCP_UPLOAD_URL': os.environ.get('SCP_UPLOAD_URL', f"{os.environ.get('SCP_UPLOAD_HOST', 'localhost:/dist')}/{apt_path}"),
         'SCP_UPLOAD_USER': os.environ.get('SCP_UPLOAD_USER'),
         'SCP_UPLOAD_PASS': os.environ.get('SCP_UPLOAD_PASS'),
+        'PIP_RETRIES': '10',
+        'PIP_TIMEOUT': '100',
+        'PIP_DEFAULT_TIMEOUT': '100',
     }
 
     if requires:
