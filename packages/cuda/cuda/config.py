@@ -22,7 +22,7 @@ def cuda_build_args(version):
 def cuda_package(version, url, deb=None, packages=None, requires=None) -> list:
     """
     Generate containers for a particular version of CUDA installed from debian packages
-    This will download & install the specified packages (by default the full CUDA Toolkit) 
+    This will download & install the specified packages (by default the full CUDA Toolkit)
     from a .deb URL from developer.nvidia.com/cuda-downloads (the `aarch64-jetson` versions)
     """
     if not deb:
@@ -175,6 +175,9 @@ def pip_cache(version, requires=None):
 
 if IS_TEGRA:
     package = [
+        # JetPack 7
+        cuda_package('12.9', 'https://developer.download.nvidia.com/compute/cuda/12.9.0/local_installers/cuda-tegra-repo-ubuntu2204-12-9-local_12.9.0-1_arm64.deb', requires='==38.*'),
+        cuda_samples('12.9', requires='==38.*'),
 
         # JetPack 6
         cuda_package('12.2', 'https://nvidia.box.com/shared/static/uvqtun1sc0bq76egarc8wwuh6c23e76e.deb', 'cuda-tegra-repo-ubuntu2204-12-2-local', requires='==36.*'),
