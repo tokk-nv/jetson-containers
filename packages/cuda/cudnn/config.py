@@ -1,4 +1,3 @@
-
 from jetson_containers import L4T_VERSION, CUDA_VERSION, update_dependencies, package_requires, IS_TEGRA, IS_SBSA
 from packaging.version import Version
 
@@ -6,12 +5,14 @@ import os
 
 # Define the default CUDNN_VERSION either from environment variable or
 # as to what version of cuDNN was released with that version of CUDA
-if 'CUDNN_VERSION' in os.environ and len(os.environ['CUDNN_VERSION']) > 0:    
+if 'CUDNN_VERSION' in os.environ and len(os.environ['CUDNN_VERSION']) > 0:
     CUDNN_VERSION = Version(os.environ['CUDNN_VERSION'])
 else:
     if L4T_VERSION.major >= 36:
         if CUDA_VERSION >= Version('13.0'):
             CUDNN_VERSION = Version('10.0')
+        elif CUDA_VERSION >= Version('12.9'):
+            CUDNN_VERSION = Version('9.9')
         elif CUDA_VERSION >= Version('12.8'):
             CUDNN_VERSION = Version('9.8')
         elif CUDA_VERSION == Version('12.6'):
@@ -34,11 +35,11 @@ def cudnn_package(version, url, deb=None, packages=None, cuda=None, requires=Non
 
     if not packages:
         packages = os.environ.get('CUDNN_PACKAGES', 'libcudnn*-dev libcudnn*-samples')
-    
+
     cudnn = package.copy()
-    
+
     cudnn['name'] = f'cudnn:{version}'
-    
+
     cudnn['build_args'] = {
         'CUDNN_URL': url,
         'CUDNN_DEB': deb,
@@ -47,10 +48,10 @@ def cudnn_package(version, url, deb=None, packages=None, cuda=None, requires=Non
 
     if Version(version) == CUDNN_VERSION:
         cudnn['alias'] = 'cudnn'
-    
+
     if cuda:
         cudnn['depends'] = update_dependencies(cudnn['depends'], f"cuda:{cuda}")
-        
+
     if requires:
         cudnn['requires'] = requires
 
@@ -67,18 +68,18 @@ def cudnn_builtin(version=None, requires=None, default=False):
     if version is not None:
         if not isinstance(version, str):
             version = f'{version.major}.{version.minor}'
-           
+
         if default:
-            passthrough['alias'] = 'cudnn'  
-            
+            passthrough['alias'] = 'cudnn'
+
         passthrough['name'] += f':{version}'
-     
+
     if requires:
         passthrough['requires'] = requires
-        
+
     del passthrough['dockerfile']
     passthrough['depends'] = ['cuda']
-    
+
     return passthrough
 
 CUDNN_URL='https://developer.download.nvidia.com/compute/cudnn'
@@ -86,6 +87,14 @@ IS_CONFIG='package' in globals()  # CUDNN_VERSION gets imported by other package
 
 if IS_TEGRA and IS_CONFIG:
     package = [
+        # JetPack 7
+        cudnn_package(
+            '9.9',
+            f'{CUDNN_URL}/9.9.0/local_installers/cudnn-local-tegra-repo-ubuntu2404-9.9.0_1.0-1_arm64.deb',
+            cuda='12.9',
+            requires='==38.*',
+            packages="libcudnn9-cuda-12 libcudnn9-dev-cuda-12 libcudnn9-samples"
+        ),
         # JetPack 6
         cudnn_package(
             '8.9',
