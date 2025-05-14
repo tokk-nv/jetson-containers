@@ -12,9 +12,16 @@ if [ "$FORCE_BUILD" == "on" ]; then
     exit 1
 fi
 
-# install from the Jetson PyPI server ($PIP_INSTALL_URL)
-pip3 install jaxlib==${JAX_VERSION} jax_cuda12_plugin opt_einsum
-pip3 install --no-dependencies jax==${JAX_VERSION}
+# # install from the Jetson PyPI server ($PIP_INSTALL_URL)
+# pip3 install jaxlib==${JAX_VERSION} jax_cuda12_plugin opt_einsum
+# pip3 install --no-dependencies jax==${JAX_VERSION}
+pip3 install opt_einsum
+
+# install from the pre-built wheel files
+pip3 install /opt/wheels/jaxlib-0.6.0.dev20250514-cp312-cp312-manylinux2014_aarch64.whl \
+    /opt/wheels/jax-0.6.0.dev20250416+127aa76-py3-none-any.whl \
+    --no-deps /opt/wheels/jax_cuda12_pjrt-0.6.0.dev20250514-py3-none-manylinux2014_aarch64.whl \
+    /opt/wheels/jax_cuda12_plugin-0.6.0.dev20250514-cp312-cp312-manylinux2014_aarch64.whl
 
 if [ $(vercmp "$JAX_VERSION" "0.6.0") -ge 0 ]; then
     pip3 install 'ml_dtypes>=0.5' # missing float4_e2m1fn

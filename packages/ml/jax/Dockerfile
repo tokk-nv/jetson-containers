@@ -20,9 +20,13 @@ ARG JAX_CUDA_ARCH_ARGS \
 ENV JAX_CUDA_ARCH_LIST=${JAX_CUDA_ARCH_ARGS} \
     JAX_CACHE_DIR=/data/models/jax
 
+# copy pre-built pip wheel files for installing (sideload) JAX
+RUN mkdir -p /opt/wheels
+COPY wheels/*.whl /opt/wheels/
+
 # copy installation and build scripts for JAX
 COPY build.sh install.sh link_cuda.sh /tmp/JAX/
 
 # attempt to install JAX from pip, and fall back to building it if the installation fails
 RUN /tmp/JAX/install.sh || /tmp/JAX/build.sh
-    
+
