@@ -72,7 +72,6 @@ USE_DISTRIBUTED=1 \
 USE_FLASH_ATTENTION=1 \
 USE_MEM_EFF_ATTENTION=1 \
 USE_TENSORRT=0 \
-
 python3 setup.py bdist_wheel --dist-dir /opt --verbose 2>&1 | tee /tmp/pytorch_build_$(date +%Y%m%d_%H%M%S).log
 
 BUILD_STATUS=${PIPESTATUS[0]}
