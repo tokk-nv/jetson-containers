@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Python builder
-set -ex
+set -xuo pipefail
 
 echo "Building PyTorch ${PYTORCH_BUILD_VERSION}"
 
@@ -17,8 +17,7 @@ if [[ "$UBUNTU_VERSION" == *"24.04"* ]]; then
 fi
 
 # build from source
-git clone --branch "v${PYTORCH_BUILD_VERSION}" --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch ||
-git clone --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch
+
 cd /opt/pytorch
 
 # https://github.com/pytorch/pytorch/issues/138333
@@ -32,6 +31,48 @@ pip3 install scikit-build ninja
 pip3 install 'cmake<4'
 
 #TORCH_CXX_FLAGS="-D_GLIBCXX_USE_CXX11_ABI=0" \
+
+export MAX_JOBS=14  # or whatever is appropriate for your system
+export VERBOSE=1
+export CMAKE_VERBOSE_MAKEFILE=1
+export PYTORCH_BUILD_VERBOSE=1
+export USE_NINJA=1  # Ensures ninja is used (usually default)
+export NINJA_STATUS="[%r processes, %f/%t tasks, %es elapsed] "
+export BUILD_TEST=0
+export CMAKE_ARGS="-DBUILD_TEST=OFF -DBUILD_TESTS=OFF -DBUILD_CAFFE2_OPS=OFF -DUSE_GTEST=OFF"
+export PYTORCH_BUILD_NUMBER=1
+
+# Best practices for PyTorch build on Jetson Thor (Blackwell)
+
+# 1. Print all environment variables and system info for debugging
+printenv | sort
+uname -a
+cat /etc/os-release || true
+free -h
+nproc
+lscpu || true
+
+echo "/dev/shm size:"
+df -h /dev/shm
+if [ $(df --output=size /dev/shm | tail -1) -lt 8000000 ]; then
+    echo "WARNING: /dev/shm is less than 8GB. Consider running your container with --shm-size=8g for PyTorch builds."
+fi
+
+# 2. Check CUDA arch flags for Jetson Thor (Blackwell, sm_101)
+echo "TORCH_CUDA_ARCH_LIST=$TORCH_CUDA_ARCH_LIST"
+
+# 3. Optionally enable ccache if available
+if command -v ccache &> /dev/null; then
+    export USE_CCACHE=1
+    export CCACHE_DIR="/tmp/ccache"
+    export CC="ccache /usr/bin/gcc-11"
+    export CXX="ccache /usr/bin/g++-11"
+    echo "Using ccache at $CCACHE_DIR"
+    ccache -s
+else
+    export CC=/usr/bin/gcc-11
+    export CXX=/usr/bin/g++-11
+fi
 
 PYTORCH_BUILD_NUMBER=1 \
 USE_CUDNN=1 \
@@ -47,8 +88,7 @@ USE_BLAS="$USE_BLAS" \
 BLAS="$BLAS" \
 python3 setup.py bdist_wheel --dist-dir /opt
 
-cd /
-rm -rf /opt/pytorch
+python3 setup.py bdist_wheel --dist-dir /opt --verbose 2>&1 | tee /tmp/pytorch_build_$(date +%Y%m%d_%H%M%S).log
 
 # install the compiled wheel
 pip3 install /opt/torch*.whl

@@ -3,6 +3,11 @@ set -ex
 
 echo "##### 🏢 \$PYTORCH_OFFICIAL_WHL is $PYTORCH_OFFICIAL_WHL #####"
 
+if [ "$FORCE_BUILD" == "on" ]; then
+	echo "Forcing build of PyTorch ${PYTORCH_BUILD_VERSION}"
+	exit 1
+fi
+
 # install prerequisites
 apt-get update
 apt-get install -y --no-install-recommends \
@@ -20,11 +25,18 @@ fi
 rm -rf /var/lib/apt/lists/*
 apt-get clean
 
+<<<<<<< HEAD
 if [ "$FORCE_BUILD" == "on" ]; then
 	echo "Forcing build of PyTorch ${PYTORCH_BUILD_VERSION}"
 	exit 1
 fi
 
+=======
+# on x86_64, install from pytorch nightly server
+# on aarch64, install from the Jetson pypi server ($PIP_INSTALL_URL)
+pip3 install torch==${TORCH_VERSION} || \
+pip3 install --pre "torch>=${PYTORCH_BUILD_VERSION}.dev,<=${PYTORCH_BUILD_VERSION}"
+>>>>>>> fcd569e3 (PyTorch 2.7 build for sm_87 and sm_101)
 
 if [ "$PYTORCH_OFFICIAL_WHL" == "on" ]; then
 	echo "##### 🏢Using official PyTorch 2.7 WHL #####"
