@@ -26,12 +26,26 @@ ARG TORCH_CUDA_ARCH_LIST \
     USE_XNNPACK=1 \
     USE_PYTORCH_QNNPACK=1 \
     FORCE_BUILD=off
-    
+
 ENV TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST} \
     PIP_EXTRA_INDEX_URL=${PIP_EXTRA_INDEX_URL} \
     TORCH_HOME=/data/models/torch
 
-COPY install.sh build.sh /tmp/pytorch/
 
 # attempt to install from pip, and fall back to building it
-RUN /tmp/pytorch/install.sh || /tmp/pytorch/build.sh
+#COPY install.sh build.sh build_clone_repo.sh /tmp/pytorch/
+#RUN /tmp/pytorch/install.sh || bash -c "/tmp/pytorch/build_clone_repo.sh && /tmp/pytorch/build.sh"
+
+### Skip trying to install for now, as we know we don't have pre-built wheel yet.
+COPY build_clone_repo.sh /tmp/pytorch/
+RUN /tmp/pytorch/build_clone_repo.sh
+
+# 1. Install GCC-11 and G++-11
+RUN apt-get update && \
+    apt-get install -y gcc-11 g++-11
+
+# 2. Set environment variables so all subsequent RUN commands use GCC-11
+ENV CC=gcc-11
+ENV CXX=g++-11
+COPY build.sh /tmp/pytorch/
+RUN /tmp/pytorch/build.sh

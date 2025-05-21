@@ -101,6 +101,9 @@ def pytorch_wget(version, whl, url, requires, alias=None):
 
 
 package = [
+    # JetPack 7
+    pytorch_pip('2.7', requires='>=38'),      # Support for L4T 38.1
+
     # JetPack 5/6
     pytorch_pip('2.0', requires='==35.*'),
     pytorch_pip('2.1', requires='>=35'),

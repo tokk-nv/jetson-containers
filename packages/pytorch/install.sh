@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 set -ex
 
+if [ "$FORCE_BUILD" == "on" ]; then
+	echo "Forcing build of PyTorch ${PYTORCH_BUILD_VERSION}"
+	exit 1
+fi
+
 # install prerequisites
 apt-get update
 apt-get install -y --no-install-recommends \
         libopenblas-dev \
         libomp-dev
-        
+
 if [ $USE_MPI == 1 ]; then
   apt-get install -y --no-install-recommends \
           libopenmpi-dev \
@@ -17,11 +22,6 @@ fi
 
 rm -rf /var/lib/apt/lists/*
 apt-get clean
-
-if [ "$FORCE_BUILD" == "on" ]; then
-	echo "Forcing build of PyTorch ${PYTORCH_BUILD_VERSION}"
-	exit 1
-fi
 
 # on x86_64, install from pytorch nightly server
 # on aarch64, install from the Jetson pypi server ($PIP_INSTALL_URL)
@@ -36,7 +36,7 @@ python3 -c 'import torch; print(f"PyTorch version: {torch.__version__}"); print(
 
 # PyTorch C++ extensions frequently use ninja parallel builds
 pip3 install scikit-build ninja
-   
+
 # temporary patches to enable newer blackwell sm's
 if [[ "$(uname -m)" == "x86_64" && ${TORCH_VERSION} == "2.6" ]]; then
   PYTHON_ROOT=`pip3 show torch | grep Location: | cut -d' ' -f2`
