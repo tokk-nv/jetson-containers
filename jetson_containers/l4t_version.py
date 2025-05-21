@@ -8,7 +8,7 @@
 #    CUDA_ARCHITECTURES (list[int]) -- e.g. [53, 62, 72, 87, 101]
 #    SYSTEM_ARCH (str) -- e.g. 'aarch64' or 'x86_64'
 #    LSB_RELEASE (str) -- e.g. '18.04', '20.04', '22.04'
-#    
+#
 import os
 import re
 import sys
@@ -127,7 +127,8 @@ def get_jetpack_version(l4t_version: str = None, default='6.2'):
 
     NVIDIA_JETPACK = {
         # -------- JP7 --------
-        "37.0.0": "7.0 EA",
+        "38.1.0": "7.0",
+        "38.0.0": "7.0 EA",
         # -------- JP6 --------
         "36.4.3": "6.2",
         "36.4.2": "6.1.1",
@@ -225,7 +226,7 @@ def get_cuda_version(version_file: str = "/usr/local/cuda/version.json", l4t_ver
         return to_version(os.environ['CUDA_VERSION'])
 
     if LSB_RELEASE == '24.04' and L4T_VERSION.major > 36:
-        return Version('13.0')  # default to CUDA 13.0 for 24.04 containers on JP7
+        return Version('12.9')  # default to CUDA 12.9 for 24.04 containers on JP7 for now
 
     if LSB_RELEASE == '24.04' and L4T_VERSION.major <= 36:
         return Version('12.8')  # default to CUDA 12.8 for 24.04 containers on JP6

@@ -7,13 +7,13 @@ def python(version, requires=None) -> list:
 
     pkg['name'] = f'python:{version}'
     pkg['build_args'] = {'PYTHON_VERSION': version}
-    
+
     if Version(version) == PYTHON_VERSION:
         pkg['alias'] = 'python'
 
     if requires:
         pkg['requires'] = requires
-        
+
     return pkg
 
 package = [
@@ -24,4 +24,5 @@ package = [
     python('3.12', '>=34'),   # JetPack 6
     python('3.13', '>=34'),   # JetPack 6
     python('3.14', '>=34'),   # JetPack 6
+    python('3.12', '>=38'),   # JetPack 7
 ]
