@@ -49,3 +49,17 @@ ENV CC=gcc-11
 ENV CXX=g++-11
 COPY build.sh /tmp/pytorch/
 RUN /tmp/pytorch/build.sh
+RUN ls -lh /opt/torch*.whl
+
+# 3. Install pip and setuptools
+RUN apt-get update && \
+    apt-get install -y python3-pip python3-setuptools
+
+# 4. Install PyTorch dependencies
+RUN pip3 install setuptools wheel
+
+# 5. Install PyTorch
+RUN pip3 install /opt/torch*.whl
+
+# 6. Verify PyTorch installation
+# RUN python3 -c 'import torch; print(f"PyTorch version: {torch.__version__}"); print(f"CUDA available:  {torch.cuda.is_available()}"); print(f"cuDNN version:   {torch.backends.cudnn.version()}"); print(torch.__config__.show());'
