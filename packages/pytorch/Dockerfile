@@ -44,6 +44,10 @@ RUN /tmp/pytorch/build_clone_repo.sh
 RUN apt-get update && \
     apt-get install -y gcc-11 g++-11
 
+# 1b. Install OpenBLAS
+RUN apt-get update && \
+    apt-get install -y libopenblas-dev liblapack-dev
+
 # 2. Set environment variables so all subsequent RUN commands use GCC-11
 ENV CC=gcc-11
 ENV CXX=g++-11

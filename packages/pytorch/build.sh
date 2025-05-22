@@ -27,27 +27,41 @@ export PYTORCH_BUILD_VERBOSE=1
 export USE_NINJA=1  # Ensures ninja is used (usually default)
 export NINJA_STATUS="[%r processes, %f/%t tasks, %es elapsed] "
 export BUILD_TEST=0
+
+### Optional Flags for Minimal Build
 export CMAKE_ARGS="-DBUILD_TEST=OFF -DBUILD_TESTS=OFF -DBUILD_CAFFE2_OPS=OFF -DUSE_GTEST=OFF"
-export PYTORCH_BUILD_NUMBER=1
-export USE_DISTRIBUTED=0
 export USE_CAFFE2=0
 export BUILD_CAFFE2_OPS=OFF
-export BUILD_TEST=0
-export BUILD_TESTS=OFF
-export USE_GTEST=0
-export USE_MKLDNN=0
-export USE_NCCL=0
-export USE_QNNPACK=0
-export USE_XNNPACK=0
-export USE_FBGEMM=0
-export USE_NNPACK=0
-export USE_PYTORCH_QNNPACK=0
-export USE_TENSORRT=0
-export USE_CUDA=1
-export USE_CUDNN=1
-export USE_NATIVE_ARCH=1
-export CMAKE_ARGS="$CMAKE_ARGS -DBUILD_CAFFE2_OPS=OFF -DBUILD_TEST=OFF -DBUILD_TESTS=OFF -DUSE_GTEST=OFF"
+# export BUILD_TESTS=OFF
+# export USE_GTEST=0
+# export USE_MKLDNN=0
+# export USE_NCCL=0
+# export USE_QNNPACK=0
+# export USE_XNNPACK=0
+# export USE_FBGEMM=0
+# export USE_NNPACK=0
+# export USE_PYTORCH_QNNPACK=0
+# export USE_TENSORRT=0
+# export USE_CUDA=1
+# export USE_CUDNN=1
+# export USE_NATIVE_ARCH=1
+
+### LAPACK support
 export USE_LAPACK=1
+export USE_BLAS=1
+export BLAS=OpenBLAS
+
+### Original Flags
+export PYTORCH_BUILD_NUMBER=1
+export USE_CUDNN=1
+export USE_CUSPARSELT=1
+export USE_CUDSS=1
+export USE_CUFILE=1
+export USE_NATIVE_ARCH=1
+export USE_DISTRIBUTED=1
+export USE_FLASH_ATTENTION=1
+export USE_MEM_EFF_ATTENTION=1
+export USE_TENSORRT=0
 
 # Best practices for PyTorch build on Jetson Thor (Blackwell)
 
@@ -81,16 +95,6 @@ else
     export CXX=/usr/bin/g++-11
 fi
 
-PYTORCH_BUILD_NUMBER=1 \
-USE_CUDNN=1 \
-USE_CUSPARSELT=1 \
-USE_CUDSS=1 \
-USE_CUFILE=1 \
-USE_NATIVE_ARCH=1 \
-USE_DISTRIBUTED=1 \
-USE_FLASH_ATTENTION=1 \
-USE_MEM_EFF_ATTENTION=1 \
-USE_TENSORRT=0 \
 python3 setup.py bdist_wheel --dist-dir /opt --verbose 2>&1 | tee /tmp/pytorch_build_$(date +%Y%m%d_%H%M%S).log
 
 BUILD_STATUS=${PIPESTATUS[0]}
