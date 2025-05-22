@@ -47,6 +47,7 @@ export USE_CUDA=1
 export USE_CUDNN=1
 export USE_NATIVE_ARCH=1
 export CMAKE_ARGS="$CMAKE_ARGS -DBUILD_CAFFE2_OPS=OFF -DBUILD_TEST=OFF -DBUILD_TESTS=OFF -DUSE_GTEST=OFF"
+export USE_LAPACK=1
 
 # Best practices for PyTorch build on Jetson Thor (Blackwell)
 
