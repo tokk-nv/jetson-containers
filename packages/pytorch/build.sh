@@ -95,6 +95,26 @@ else
     export CXX=/usr/bin/g++-11
 fi
 
+# 4. Install prerequisites
+apt-get update
+apt-get install -y --no-install-recommends \
+        libopenblas-dev \
+        libomp-dev
+
+if [ $USE_MPI == 1 ]; then
+  apt-get install -y --no-install-recommends \
+          libopenmpi-dev \
+          openmpi-bin \
+          openmpi-common \
+          gfortran
+fi
+
+apt-get install -y gcc-11 g++-11
+
+rm -rf /var/lib/apt/lists/*
+apt-get clean
+
+# 5. Build PyTorch
 python3 setup.py bdist_wheel --dist-dir /opt --verbose 2>&1 | tee /tmp/pytorch_build_$(date +%Y%m%d_%H%M%S).log
 
 BUILD_STATUS=${PIPESTATUS[0]}
@@ -105,10 +125,17 @@ fi
 
 ls -lh /opt/torch*.whl
 
-# cd /
-# rm -rf /opt/pytorch
+cd /
+rm -rf /opt/pytorch
 
-# # install the compiled wheel
-# pip3 install /opt/torch*.whl
-# python3 -c 'import torch; print(f"PyTorch version: {torch.__version__}"); print(f"CUDA available:  {torch.cuda.is_available()}"); print(f"cuDNN version:   {torch.backends.cudnn.version()}"); print(torch.__config__.show());'
-# twine upload --verbose /opt/torch*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+# install the compiled wheel
+pip3 install /opt/torch*.whl
+
+# Not calling torch.cuda.is_available() and torch.__config__.show() to avoid the sagfault
+python3 -c 'import torch; \
+    print(f"PyTorch version: {torch.__version__}"); \
+    print(f"CUDA device #  : {torch.cuda.device_count()}"); \
+    print(f"CUDA version   : {torch.version.cuda}"); \
+    print(f"cuDNN version  : {torch.backends.cudnn.version()}");'
+
+twine upload --verbose /opt/torch*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"

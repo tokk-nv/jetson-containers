@@ -68,4 +68,8 @@ RUN /tmp/pytorch/install.sh || bash -c "/tmp/pytorch/build_clone_repo.sh && /tmp
 # RUN pip3 install /opt/torch*.whl
 
 # # 6. Verify PyTorch installation
-# # RUN python3 -c 'import torch; print(f"PyTorch version: {torch.__version__}"); print(f"CUDA available:  {torch.cuda.is_available()}"); print(f"cuDNN version:   {torch.backends.cudnn.version()}"); print(torch.__config__.show());'
+# RUN python3 -c 'import torch; \
+#     print(f"PyTorch version: {torch.__version__}"); \
+#     print(f"CUDA device #  : {torch.cuda.device_count()}"); \
+#     print(f"CUDA version   : {torch.version.cuda}"); \
+#     print(f"cuDNN version  : {torch.backends.cudnn.version()}");'
