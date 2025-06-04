@@ -1,17 +1,7 @@
 #!/usr/bin/env bash
 set -ex
 
-ARCH=$(uname -m)
-ARCH_TYPE=$ARCH
-
-# Detectar si es Tegra
-if [[ "$ARCH" == "aarch64" ]]; then
-    if uname -a | grep -qi tegra; then
-        ARCH_TYPE="tegra-aarch64"
-    fi
-fi
-
-echo "Detected architecture: ${ARCH_TYPE}"
+IS_SBSA=$([ -z "$(nvidia-smi --query-gpu=name --format=csv,noheader | grep nvgpu)" ] && echo 1 || echo 0)
 
 apt-get update
 apt-get install -y --no-install-recommends \
@@ -24,7 +14,7 @@ echo "Downloading ${CUDA_DEB}"
 mkdir -p /tmp/cuda
 cd /tmp/cuda
 
-if [[ "$ARCH_TYPE" == "tegra-aarch64" ]]; then
+if [[ -z $IS_SBSA ]]; then
     # Jetson (Tegra)
     wget $WGET_FLAGS \
         https://developer.download.nvidia.com/compute/cuda/repos/${DISTRO}/arm64/cuda-${DISTRO}.pin \
@@ -41,7 +31,7 @@ dpkg -i *.deb
 cp /var/cuda-*-local/cuda-*-keyring.gpg /usr/share/keyrings/
 
 # Tegra (Jetson)
-if [[ "$ARCH_TYPE" == "tegra-aarch64" ]]; then
+if [[ -z $IS_SBSA ]]; then
     ar x /var/cuda-tegra-repo-ubuntu*-local/cuda-compat-*.deb
     tar xvf data.tar.xz -C /
 fi

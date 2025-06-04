@@ -185,6 +185,32 @@ install_docker() {
     fi
     git clone https://github.com/jetsonhacks/install-docker.git
     cd install-docker
+
+    sudo apt-get update
+    sudo apt-get install -y curl gnupg
+
+    TARGET_FILE="install_nvidia_docker.sh"
+
+    REPLACEMENT='curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --yes --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+    && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+        sed '\''s#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g'\'' | \
+        sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    sudo sed -i -e '\''/experimental/ s/^#//g'\'' /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    sudo apt-get update
+    sudo apt-get install -y nvidia-container-toolkit'
+
+    # Use awk to do the replacement
+    awk -v replacement="$REPLACEMENT" '
+    /sudo apt install -y nvidia-container/ {
+        print replacement
+        next
+    }
+    { print }
+    ' "$TARGET_FILE" > "${TARGET_FILE}.tmp" && mv "${TARGET_FILE}.tmp" "$TARGET_FILE"
+
+    echo "Replacement complete in $TARGET_FILE"
+    cat $TARGET_FILE
+
     bash ./install_nvidia_docker.sh
 
     log INFO "✅ Docker and NVIDIA runtime installation complete!"
