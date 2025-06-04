@@ -7,10 +7,22 @@ FROM ${BASE_IMAGE}
 ARG CUDA_BRANCH \
     CUDA_SAMPLES_MAKE='cmake' \
     CUDA_SAMPLES_ROOT='/opt/cuda-samples'
-    
+
 RUN git clone --branch ${CUDA_BRANCH} --depth=1 --recursive \
         https://github.com/NVIDIA/cuda-samples ${CUDA_SAMPLES_ROOT}
 
 COPY install-samples.sh /tmp/cuda/install-samples.sh
 
 RUN /tmp/cuda/install-samples.sh
+
+
+###
+# NVBandwidth utility is to replace the CUDA Sample's bandwidthTest.
+#
+# > The bandwidthTest sample was out-of-date and has been removed as of the CUDA Samples 12.9 release.
+# > https://github.com/NVIDIA/cuda-samples/blob/master/Samples/1_Utilities/README.md
+###
+
+
+RUN git clone https://github.com/nvidia/nvbandwidth /opt/nvbandwidth
+RUN cd /opt/nvbandwidth && ./debian_install.sh
