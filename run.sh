@@ -329,6 +329,7 @@ if [ $SYSTEM_ARCH = "tegra-aarch64" ]; then
 	( set -x ;
 
 	$SUDO docker run --runtime nvidia --env NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics -it --rm --network host \
+		--privileged \
 		--shm-size=8g \
 		--volume /tmp/argus_socket:/tmp/argus_socket \
 		--volume /etc/enctune.conf:/etc/enctune.conf \
