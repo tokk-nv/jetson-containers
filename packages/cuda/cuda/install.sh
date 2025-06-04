@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 set -ex
 
+<<<<<<< HEAD
 ARCH=$(uname -m)
 ARCH_TYPE=$ARCH
 IS_SBSA=$([ -z "$(nvidia-smi --query-gpu=name --format=csv,noheader | grep nvgpu)" ] && echo 1 || echo 0)
 
 echo "Detected architecture: ${ARCH_TYPE}"
 echo "IS_SBSA: ${IS_SBSA}"
+=======
+IS_SBSA=$([ -z "$(nvidia-smi --query-gpu=name --format=csv,noheader | grep nvgpu)" ] && echo 1 || echo 0)
+>>>>>>> 09bbc618 (Initial patch for Thor with OpenRM GPU driver)
 
 apt-get update
 apt-get install -y --no-install-recommends \
@@ -19,11 +23,19 @@ echo "Setting up CUDA installation"
 mkdir -p /tmp/cuda
 cd /tmp/cuda
 
+<<<<<<< HEAD
 # Check if we're using a local deb file
 if [[ "${USE_LOCAL_DEB:-false}" == "true" && -n "${CUDA_LOCAL_DEB:-}" ]]; then
     echo "Using local CUDA deb file: ${CUDA_LOCAL_DEB}"
     # Copy the local deb file to the container
     cp "${CUDA_LOCAL_DEB}" /tmp/cuda/
+=======
+if [[ -z $IS_SBSA ]]; then
+    # Jetson (Tegra)
+    wget $WGET_FLAGS \
+        https://developer.download.nvidia.com/compute/cuda/repos/${DISTRO}/arm64/cuda-${DISTRO}.pin \
+        -O /etc/apt/preferences.d/cuda-repository-pin-600
+>>>>>>> 09bbc618 (Initial patch for Thor with OpenRM GPU driver)
 else
     echo "Downloading ${CUDA_DEB} from ${CUDA_URL}"
     # Download from URL as before
