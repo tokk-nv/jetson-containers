@@ -3,15 +3,10 @@ set -ex
 
 ARCH=$(uname -m)
 ARCH_TYPE=$ARCH
-
-# Detectar si es Tegra
-if [[ "$ARCH" == "aarch64" ]]; then
-    if uname -a | grep -qi tegra; then
-        ARCH_TYPE="tegra-aarch64"
-    fi
-fi
+IS_SBSA=$([ -z "$(nvidia-smi --query-gpu=name --format=csv,noheader | grep nvgpu)" ] && echo 1 || echo 0)
 
 echo "Detected architecture: ${ARCH_TYPE}"
+echo "IS_SBSA: ${IS_SBSA}"
 
 apt-get update
 apt-get install -y --no-install-recommends \
@@ -20,28 +15,38 @@ apt-get install -y --no-install-recommends \
 rm -rf /var/lib/apt/lists/*
 apt-get clean
 
-echo "Downloading ${CUDA_DEB}"
+echo "Setting up CUDA installation"
 mkdir -p /tmp/cuda
 cd /tmp/cuda
 
-if [[ "$ARCH_TYPE" == "tegra-aarch64" ]]; then
-    # Jetson (Tegra)
-    wget $WGET_FLAGS \
-        https://developer.download.nvidia.com/compute/cuda/repos/${DISTRO}/arm64/cuda-${DISTRO}.pin \
-        -O /etc/apt/preferences.d/cuda-repository-pin-600
+# Check if we're using a local deb file
+if [[ "${USE_LOCAL_DEB:-false}" == "true" && -n "${CUDA_LOCAL_DEB:-}" ]]; then
+    echo "Using local CUDA deb file: ${CUDA_LOCAL_DEB}"
+    # Copy the local deb file to the container
+    cp "${CUDA_LOCAL_DEB}" /tmp/cuda/
 else
-    # ARM64 SBSA (Grace)
-    wget $WGET_FLAGS \
-        https://developer.download.nvidia.com/compute/cuda/repos/${DISTRO}/sbsa/cuda-${DISTRO}.pin \
-        -O /etc/apt/preferences.d/cuda-repository-pin-600
+    echo "Downloading ${CUDA_DEB} from ${CUDA_URL}"
+    # Download from URL as before
+    if [[ "$ARCH_TYPE" == "tegra-aarch64" ]]; then
+        # Jetson (Tegra)
+        wget $WGET_FLAGS \
+            https://developer.download.nvidia.com/compute/cuda/repos/${DISTRO}/arm64/cuda-${DISTRO}.pin \
+            -O /etc/apt/preferences.d/cuda-repository-pin-600
+    else
+        # ARM64 SBSA (Grace)
+        wget $WGET_FLAGS \
+            https://developer.download.nvidia.com/compute/cuda/repos/${DISTRO}/sbsa/cuda-${DISTRO}.pin \
+            -O /etc/apt/preferences.d/cuda-repository-pin-600
+    fi
+
+    wget $WGET_FLAGS ${CUDA_URL}
 fi
 
-wget $WGET_FLAGS ${CUDA_URL}
 dpkg -i *.deb
 cp /var/cuda-*-local/cuda-*-keyring.gpg /usr/share/keyrings/
 
 # Tegra (Jetson)
-if [[ "$ARCH_TYPE" == "tegra-aarch64" ]]; then
+if [[ -z $IS_SBSA ]]; then
     ar x /var/cuda-tegra-repo-ubuntu*-local/cuda-compat-*.deb
     tar xvf data.tar.xz -C /
 fi
