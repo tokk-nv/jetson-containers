@@ -3,7 +3,7 @@ import os
 from packaging.version import Version
 from jetson_containers import (
     L4T_VERSION, CUDA_VERSION, SYSTEM_ARM,
-    update_dependencies, package_requires, IS_TEGRA, IS_SBSA
+    update_dependencies, package_requires, IS_TEGRA, IS_SBSA, SYSTEM_X86
 )
 
 package['depends'] = ['cuda', 'cudnn', 'python']
@@ -122,7 +122,7 @@ def tensorrt_builtin(version=None, requires=None, default=False):
 
 TENSORRT_URL='https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt'
 
-if IS_TEGRA:
+if not IS_SBSA and not SYSTEM_X86:
     package = [
         # JetPack 6.1
         tensorrt_deb('8.6', 'https://nvidia.box.com/shared/static/hmwr57hm88bxqrycvlyma34c3k4c53t9.deb','nv-tensorrt-local-repo-l4t-8.6.2-cuda-12.2', cudnn='8.9', requires=['==r36.*', '==cu122']),
@@ -151,7 +151,7 @@ elif IS_SBSA:
         tensorrt_tar('11.0',f'{TENSORRT_URL}/11.0.0/tars/TensorRT-11.0.0.36.Linux.aarch64-gnu.cuda-13.0.tar.gz', cudnn='10.0', requires='aarch64'),
     ]
 
-else:
+elif SYSTEM_X86:
     # x86_64
     package = [
         tensorrt_tar('10.9', f'{TENSORRT_URL}/10.9.0/tars/TensorRT-10.9.0.34.Linux.x86_64-gnu.cuda-12.8.tar.gz', cudnn='9.8', requires='x86_64'),

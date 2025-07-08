@@ -4,7 +4,7 @@ from packaging.version import Version
 
 from jetson_containers import (
     L4T_VERSION, JETPACK_VERSION, CUDA_VERSION,
-    CUDA_ARCHITECTURES, LSB_RELEASE, IS_SBSA, IS_TEGRA,
+    CUDA_ARCHITECTURES, LSB_RELEASE, IS_SBSA, IS_TEGRA, SYSTEM_X86,
     SYSTEM_ARM, DOCKER_ARCH, package_requires
 )
 
@@ -215,8 +215,10 @@ def pip_cache(version, requires=None):
 
     return pip_cache
 
-if IS_TEGRA:
-    print("------------------ IS_TEGRA ------------------")
+print("------------------ IS_SBSA: ", IS_SBSA)
+print("------------------ SYSTEM_X86: ", SYSTEM_X86)
+if not IS_SBSA and not SYSTEM_X86:
+    print("------------------ r36.x or older ------------------")
     package = [
 
         # JetPack 6
@@ -243,6 +245,7 @@ if IS_TEGRA:
         cuda_builtin(CUDA_VERSION, requires='<36'),
         cuda_samples(CUDA_VERSION, requires='<36'),
     ]
+
 elif IS_SBSA:
     print("################ IS_SBSA #################")
     package = [
@@ -260,7 +263,8 @@ elif IS_SBSA:
         cuda_samples('13.0', requires='>=38'),
 
     ]
-else:
+
+elif SYSTEM_X86:
     package = [
         # x86_64
         cuda_package('12.8', 'https://developer.download.nvidia.com/compute/cuda/12.8.1/local_installers/cuda-repo-ubuntu2404-12-8-local_12.8.1-570.124.06-1_amd64.deb', requires='x86_64'),
