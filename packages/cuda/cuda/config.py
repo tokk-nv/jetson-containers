@@ -24,6 +24,7 @@ def cuda_package(version, url, deb=None, packages=None, requires=None) -> list:
     Generate containers for a particular version of CUDA installed from debian packages
     This will download & install the specified packages (by default the full CUDA Toolkit)
     from a .deb URL from developer.nvidia.com/cuda-downloads (the `aarch64-jetson` versions)
+    or from an SCP path for local files
     """
     if not deb:
         deb = url.split('/')[-1].split('_')[0]
@@ -35,53 +36,28 @@ def cuda_package(version, url, deb=None, packages=None, requires=None) -> list:
 
     cuda['name'] = f'cuda:{version}'
 
-    cuda['build_args'] = {**{
-        'CUDA_URL': url,
+    # Determine if this is an SCP path or HTTP URL
+    is_scp = ':' in url and not url.startswith(('http://', 'https://'))
+
+    build_args = {
         'CUDA_DEB': deb,
         'CUDA_PACKAGES': packages,
         'IS_SBSA': IS_SBSA,
-    }, **cuda_build_args(version) }
+    }
 
-    if requires:
-        cuda['requires'] = requires
+    if is_scp:
+        # SCP path format: user@host:path or user:pass@host:path
+        build_args.update({
+            'CUDA_SCP_PATH': url,
+            'USE_SCP_DOWNLOAD': 'true',
+        })
+    else:
+        # HTTP URL
+        build_args.update({
+            'CUDA_URL': url,
+        })
 
-    package_requires(cuda, system_arch='aarch64') # default to aarch64
-
-    if 'toolkit' in packages or 'dev' in packages:
-        cuda['depends'] = ['build-essential']
-
-    if Version(version) == CUDA_VERSION:
-        cuda['alias'] = 'cuda'
-
-    cuda_pip = pip_cache(version, requires)
-    cuda['depends'].append(cuda_pip['name'])
-
-    return cuda, cuda_pip
-
-
-def cuda_local_package(version, local_deb_path, deb=None, packages=None, requires=None) -> list:
-    """
-    Generate containers for a particular version of CUDA installed from a local debian package
-    This allows using unreleased or custom CUDA deb files that are not available online
-    """
-    if not deb:
-        # Extract deb name from the local file path
-        deb = os.path.basename(local_deb_path).split('_')[0]
-
-    if not packages:
-        packages = os.environ.get('CUDA_PACKAGES', 'cuda-toolkit*')
-
-    cuda = package.copy()
-
-    cuda['name'] = f'cuda:{version}'
-
-    cuda['build_args'] = {**{
-        'CUDA_LOCAL_DEB': local_deb_path,
-        'CUDA_DEB': deb,
-        'CUDA_PACKAGES': packages,
-        'IS_SBSA': IS_SBSA,
-        'USE_LOCAL_DEB': 'true',
-    }, **cuda_build_args(version) }
+    cuda['build_args'] = {**build_args, **cuda_build_args(version)}
 
     if requires:
         cuda['requires'] = requires
@@ -255,11 +231,9 @@ elif IS_SBSA:
         cuda_package('12.9','https://developer.download.nvidia.com/compute/cuda/12.9.1/local_installers/cuda-repo-ubuntu2404-12-9-local_12.9.1-575.57.08-1_arm64.deb', requires='aarch64'),
         cuda_samples('12.9', requires='aarch64'),
 
-        # Example: Using local CUDA 13.0 deb file (uncomment and modify path as needed)
-        # on you host PC, first download the following Debian packages and SCP transfer them to the Jetson
-        # $ cd ~/Downloads/nvidia/sdkm_downloads
-        # $ scp cuda-repo-ubuntu2404-13-0-local_13.0.0-580.51-1_arm64.deb jetson@10.110.51.116:/home/jetson/Downloads/
-        cuda_local_package('13.0', '/home/jetson/Downloads/cuda-repo-ubuntu2404-13-0-local_13.0.0-580.51-1_arm64.deb', requires='>=38'),
+        # Example: Using SCP to download CUDA 13.0 deb file from remote host
+        # Format: user@host:path or user:pass@host:path for password authentication
+        cuda_package('13.0', 'nvidia:nvidia@10.110.51.47:/home/nvidia/Downloads/nvidia/sdkm_downloads/cuda-repo-ubuntu2404-13-0-local_13.0.0-580.51-1_arm64.deb', requires='>=38'),
         cuda_samples('13.0', requires='>=38'),
 
     ]
