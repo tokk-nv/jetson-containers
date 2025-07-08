@@ -19,16 +19,16 @@ echo "Setting up CUDA installation"
 mkdir -p /tmp/cuda
 cd /tmp/cuda
 
-if [[ -z $IS_SBSA ]]; then
-    # Jetson (Tegra)
-    wget $WGET_FLAGS \
-        https://developer.download.nvidia.com/compute/cuda/repos/${DISTRO}/arm64/cuda-${DISTRO}.pin \
-        -O /etc/apt/preferences.d/cuda-repository-pin-600
+# Check if we're using a local deb file
+if [[ "${USE_LOCAL_DEB:-false}" == "true" && -n "${CUDA_LOCAL_DEB:-}" ]]; then
+    echo "Using local CUDA deb file: ${CUDA_LOCAL_DEB}"
+    # Copy the local deb file to the container
+    cp "${CUDA_LOCAL_DEB}" /tmp/cuda/
 else
     echo "Downloading ${CUDA_DEB} from ${CUDA_URL}"
     # Download from URL as before
-    if [[ "$ARCH_TYPE" == "tegra-aarch64" ]]; then
-        # Jetson (Tegra)
+    if [[ -z $IS_SBSA ]]; then
+        # Jetson (Tegra) ( <= r36.x)
         wget $WGET_FLAGS \
             https://developer.download.nvidia.com/compute/cuda/repos/${DISTRO}/arm64/cuda-${DISTRO}.pin \
             -O /etc/apt/preferences.d/cuda-repository-pin-600
