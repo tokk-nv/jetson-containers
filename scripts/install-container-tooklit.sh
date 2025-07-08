@@ -51,4 +51,12 @@ safe_apt_install "sudo apt-get install -y docker-ce docker-ce-cli containerd.io 
 
 echo Docker service installed
 
+# on you host PC, first download the following Debian packages and SCP transfer them to the Jetson
+# $ cd ~/Downloads/nvidia/sdkm_downloads
+# $ scp libnvidia-container1_1.18.0~rc.1-1_arm64.deb \
+#       libnvidia-container-tools_1.18.0~rc.1-1_arm64.deb \
+#       nvidia-container-toolkit_1.18.0~rc.1-1_arm64.deb \
+#       nvidia-container-toolkit-base_1.18.0~rc.1-1_arm64.deb \
+#       jetson@10.110.51.116:/home/jetson/Downloads/
+
 cd ~/Downloads && sudo dpkg -i libnvidia-container1_1.18.0~rc.1-1_arm64.deb libnvidia-container-tools_1.18.0~rc.1-1_arm64.deb nvidia-container-toolkit_1.18.0~rc.1-1_arm64.deb nvidia-container-toolkit-base_1.18.0~rc.1-1_arm64.deb
