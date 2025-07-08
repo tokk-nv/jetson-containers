@@ -1,8 +1,22 @@
 
-from jetson_containers import L4T_VERSION, CUDA_VERSION, SYSTEM_ARM, update_dependencies, package_requires, IS_TEGRA, IS_SBSA
+import os
 from packaging.version import Version
 
-import os
+from jetson_containers import (
+    L4T_VERSION, JETPACK_VERSION, CUDA_VERSION,
+    CUDA_ARCHITECTURES, LSB_RELEASE, IS_SBSA, IS_TEGRA, SYSTEM_X86,
+    SYSTEM_ARM, DOCKER_ARCH, package_requires, update_dependencies
+)
+
+
+def cudnn_build_args(version):
+    """
+    Return some common environment settings used between variants of the CUDA containers.
+    """
+    return {
+        'CUDA_ARCH_LIST': ';'.join([str(x) for x in CUDA_ARCHITECTURES]),
+        'DISTRO': f"ubuntu{LSB_RELEASE.replace('.','')}",
+    }
 
 # Define the default CUDNN_VERSION either from environment variable or
 # as to what version of cuDNN was released with that version of CUDA
@@ -11,7 +25,7 @@ if 'CUDNN_VERSION' in os.environ and len(os.environ['CUDNN_VERSION']) > 0:
 elif SYSTEM_ARM:
     if L4T_VERSION.major >= 36:
         if CUDA_VERSION >= Version('13.0'):
-            CUDNN_VERSION = Version('10.0')
+            CUDNN_VERSION = Version('9.11')
         elif CUDA_VERSION >= Version('12.9'):
             CUDNN_VERSION = Version('9.10')
         elif CUDA_VERSION >= Version('12.8'):
@@ -31,7 +45,10 @@ else:
 
 def cudnn_package(version, url, deb=None, packages=None, cuda=None, requires=None):
     """
-    Generate containers for a particular version of cuDNN installed from debian packages
+    Generate containers for a particular version of CUDA installed from debian packages
+    This will download & install the specified packages (by default the full CUDA Toolkit)
+    from a .deb URL from developer.nvidia.com/cuda-downloads, or
+    from an SCP path for local files
     """
     if not deb:
         deb = url.split('/')[-1].split('_')[0]
@@ -43,11 +60,28 @@ def cudnn_package(version, url, deb=None, packages=None, cuda=None, requires=Non
 
     cudnn['name'] = f'cudnn:{version}'
 
-    cudnn['build_args'] = {
-        'CUDNN_URL': url,
+    # Determine if this is an SCP path or HTTP URL
+    is_scp = ':' in url and not url.startswith(('http://', 'https://'))
+
+    build_args = {
         'CUDNN_DEB': deb,
         'CUDNN_PACKAGES': packages,
+        'IS_SBSA': IS_SBSA,
     }
+
+    if is_scp:
+        # SCP path format: user@host:path or user:pass@host:path
+        build_args.update({
+            'CUDNN_SCP_PATH': url,
+            'USE_SCP_DOWNLOAD': 'true',
+        })
+    else:
+        # HTTP URL
+        build_args.update({
+            'CUDNN_URL': url,
+        })
+
+    cudnn['build_args'] = {**build_args, **cudnn_build_args(version)}
 
     if Version(version) == CUDNN_VERSION:
         cudnn['alias'] = 'cudnn'
@@ -88,7 +122,7 @@ def cudnn_builtin(version=None, requires=None, default=False):
 CUDNN_URL='https://developer.download.nvidia.com/compute/cudnn'
 IS_CONFIG='package' in globals()  # CUDNN_VERSION gets imported by other packages
 
-if IS_TEGRA and IS_CONFIG:
+if not IS_SBSA and not SYSTEM_X86:
     package = [
         # JetPack 6
         cudnn_package('8.9','https://nvidia.box.com/shared/static/ht4li6b0j365ta7b76a6gw29rk5xh8cy.deb', 'cudnn-local-tegra-repo-ubuntu2204-8.9.4.25', cuda='12.2', requires='==36.*'),
@@ -109,8 +143,13 @@ elif IS_SBSA and IS_CONFIG:
         cudnn_package('9.8',f'{CUDNN_URL}/9.8.0/local_installers/cudnn-local-repo-ubuntu2404-9.8.0_1.0-1_arm64.deb', cuda='12.8', requires='aarch64', packages="libcudnn9-cuda-12 libcudnn9-dev-cuda-12 libcudnn9-samples"),
         cudnn_package('9.10',f'{CUDNN_URL}/9.10.2/local_installers/cudnn-local-repo-ubuntu2404-9.10.2_1.0-1_arm64.deb', cuda='12.9', requires='aarch64', packages="libcudnn9-cuda-12 libcudnn9-dev-cuda-12 libcudnn9-samples"),
         cudnn_package('10.0',f'{CUDNN_URL}/10.0.0/local_installers/cudnn-local-repo-ubuntu2404-10.0.0_1.0-1_amd64.deb', cuda='13.0', requires='aarch64', packages="libcudnn10-cuda-13 libcudnn10-dev-cuda-13 libcudnn10-samples"),
+
+        # Using SCP to download cuDNN 9.11 (for CUDA 13.0) deb file from remote host
+        # Format: user@host:path or user:pass@host:path for password authentication
+        cudnn_package('9.11', 'nvidia:nvidia@10.110.51.47:/home/nvidia/Downloads/nvidia/sdkm_downloads/cudnn-local-repo-ubuntu2404-9.11.0_1.0-1_arm64.deb', packages="libcudnn9-cuda-13 libcudnn9-dev-cuda-13 libcudnn9-samples", cuda='13.0', requires='>=38'),
     ]
-elif IS_CONFIG:
+
+elif SYSTEM_X86 and IS_CONFIG:
     # x86_64
     package = [
         cudnn_package('9.8',f'{CUDNN_URL}/9.8.0/local_installers/cudnn-local-repo-ubuntu2404-9.8.0_1.0-1_amd64.deb', cuda='12.8', requires='x86_64', packages="libcudnn9-cuda-12 libcudnn9-dev-cuda-12 libcudnn9-samples"),

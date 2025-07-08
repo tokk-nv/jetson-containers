@@ -23,8 +23,8 @@ def cuda_package(version, url, deb=None, packages=None, requires=None) -> list:
     """
     Generate containers for a particular version of CUDA installed from debian packages
     This will download & install the specified packages (by default the full CUDA Toolkit)
-    from a .deb URL from developer.nvidia.com/cuda-downloads (the `aarch64-jetson` versions)
-    or from an SCP path for local files
+    from a .deb URL from developer.nvidia.com/cuda-downloads, or
+    from an SCP path for local files
     """
     if not deb:
         deb = url.split('/')[-1].split('_')[0]
