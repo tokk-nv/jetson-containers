@@ -23,10 +23,20 @@ retry() {
     fi
 }
 
-# Clone PyTorch repo with retries
-retry bash -c \
-    'rm -rf /opt/pytorch && \
-    git clone --branch "v${PYTORCH_BUILD_VERSION}" --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch'
+# Handle release candidate versions
+if [[ "${PYTORCH_BUILD_VERSION}" == "2.8.0-rc5" ]]; then
+    echo "Detected PyTorch 2.8 RC version: ${PYTORCH_BUILD_VERSION}"
+    # Clone PyTorch repo with retries for RC versions
+    retry bash -c \
+        'rm -rf /opt/pytorch && \
+        git clone --branch "v${PYTORCH_BUILD_VERSION}" --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch'
+else
+    echo "Detected stable version: ${PYTORCH_BUILD_VERSION}"
+    # Clone PyTorch repo with retries for stable versions
+    retry bash -c \
+        'rm -rf /opt/pytorch && \
+        git clone --branch "v${PYTORCH_BUILD_VERSION}" --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch'
+fi
 
 cd /opt/pytorch
 

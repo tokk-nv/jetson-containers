@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Python builder
 set -xuo pipefail
+set -e
 
 echo "Building PyTorch ${PYTORCH_BUILD_VERSION}"
 
@@ -61,7 +62,11 @@ fi
 # 2. Check CUDA arch flags for Jetson Thor (Blackwell, sm_101)
 echo "TORCH_CUDA_ARCH_LIST=$TORCH_CUDA_ARCH_LIST"
 
-# 3. Optionally enable ccache if available
+# 3. Set CUB_HOME for PyTorch build
+export CUB_HOME=/usr/local/cuda/include/
+echo "CUB_HOME=$CUB_HOME"
+
+# 4. Optionally enable ccache if available
 if command -v ccache &> /dev/null; then
     export USE_CCACHE=1
     export CCACHE_DIR="/tmp/ccache"
@@ -86,6 +91,7 @@ USE_MEM_EFF_ATTENTION=1 \
 USE_TENSORRT=0 \
 USE_BLAS="$USE_BLAS" \
 BLAS="$BLAS" \
+CUB_HOME=/usr/local/cuda/include/ \
 python3 setup.py bdist_wheel --dist-dir /opt
 
 python3 setup.py bdist_wheel --dist-dir /opt --verbose 2>&1 | tee /tmp/pytorch_build_$(date +%Y%m%d_%H%M%S).log

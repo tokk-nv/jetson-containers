@@ -3,11 +3,21 @@ from packaging.version import Version
 
 from .version import PYTORCH_VERSION
 
+# Debug prints to understand the configuration
+print(f"DEBUG: L4T_VERSION = {L4T_VERSION}")
+print(f"DEBUG: CUDA_ARCHITECTURES = {CUDA_ARCHITECTURES}")
+print(f"DEBUG: CUDA_SHORT_VERSION = {CUDA_SHORT_VERSION}")
+print(f"DEBUG: SYSTEM_ARM = {SYSTEM_ARM}")
+print(f"DEBUG: LSB_RELEASE = {LSB_RELEASE}")
+print(f"DEBUG: IS_SBSA = {IS_SBSA}")
+print(f"DEBUG: PYTORCH_VERSION = {PYTORCH_VERSION}")
 
 def pytorch_pip(version, requires=None):
     """
     Install PyTorch from pip server with Dockerfile.pip
     """
+    print(f"DEBUG: pytorch_pip called with version = {version}, requires = {requires}")
+
     pkg = package.copy()
 
     short_version = Version(version.split('-')[0]) # remove any -rc* suffix
@@ -17,6 +27,8 @@ def pytorch_pip(version, requires=None):
     if micro_version > 0:
         short_version += f".{micro_version}"
 
+    print(f"DEBUG: short_version = {short_version}, micro_version = {micro_version}")
+
     pkg['name'] = f'pytorch:{short_version}'
     pkg['dockerfile'] = 'Dockerfile'
 
@@ -25,11 +37,17 @@ def pytorch_pip(version, requires=None):
     else:
         build_version = version
 
+    print(f"DEBUG: build_version = {build_version}")
+    print(f"DEBUG: CUDA_ARCHITECTURES = {CUDA_ARCHITECTURES}")
+    print(f"DEBUG: TORCH_CUDA_ARCH_LIST will be: {';'.join([f'{x/10:.1f}' for x in CUDA_ARCHITECTURES])}")
+
     pkg['build_args'] = {
         'TORCH_CUDA_ARCH_LIST': ';'.join([f'{x/10:.1f}' for x in CUDA_ARCHITECTURES]), # retained as $TORCH_CUDA_ARCH_LIST
         'TORCH_VERSION': version,
         'PYTORCH_BUILD_VERSION': build_version
     }
+
+    print(f"DEBUG: build_args = {pkg['build_args']}")
 
     if not SYSTEM_ARM:
         pkg['build_args']['USE_FBGEMM'] = 1
@@ -109,7 +127,7 @@ def pytorch_wget(version, whl, url, requires, alias=None):
 
 package = [
     # JetPack 7
-    pytorch_pip('2.7', requires='>=38'),      # Support for L4T 38.1
+    pytorch_pip('2.8.0-rc5', requires='>=38'),      # Support for L4T 38.1 (latest RC)
 
     # JetPack 5/6
     pytorch_pip('2.0', requires='==35.*'),
@@ -121,7 +139,6 @@ package = [
     pytorch_pip('2.5', requires='==36.*'),    # without OpenMPI
     pytorch_pip('2.6', requires='>=36'),    # without OpenMPI
     pytorch_pip('2.7', requires='>=36'),     # without OpenMPI
-    pytorch_pip('2.8', requires='>=36'),    # without OpenMPI
 
     # JetPack 4
     pytorch_wget('1.10', 'torch-1.10.0-cp36-cp36m-linux_aarch64.whl', 'https://nvidia.box.com/shared/static/fjtbno0vpo676a25cgvuqc1wty0fkkg6.whl', '==32.*'),

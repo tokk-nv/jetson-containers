@@ -151,7 +151,7 @@ def pip_cache(version, requires=None):
     https://github.com/dusty-nv/jetson-containers/blob/master/docs/build.md#pip-server
     """
     short_version = f"cu{version.replace('.', '')}"
-    index_host = "jetson-ai-lab.dev"
+    index_host = os.environ.get('INDEX_HOST', "jetson-ai-lab.dev")
 
     pip_path = (
         f"jp{JETPACK_VERSION.major}/{short_version}" if IS_TEGRA

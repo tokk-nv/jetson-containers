@@ -315,7 +315,15 @@ def get_cuda_arch(l4t_version: str=None, cuda_version: str=None, format=list):
     #                    '10.0', '10.0a', '10.1', '10.1a', '12.0', '12.0a']
     if SYSTEM_ARM:
         # Nano/TX1 = 5.3, TX2 = 6.2, Xavier = 7.2, Orin = 8.7, Thor = 10.1
-        if IS_TEGRA:
+        # Prioritize SBSA detection over Tegra detection for Jetson Thor
+        if IS_SBSA:
+            if l4t_version.major >= 38:
+                cuda_architectures = [87, 110, 121]  # Ampere Orin, Thor 110, Spark 121
+            else:
+                cuda_architectures = [87, 90, 100, 103, 121]  # Ampere Orin, Hopper GH200 90, Blackwell GB200 100
+                if cuda_version >= Version('13.0'):
+                    cuda_architectures += [110] # Thor 110, Spark 121
+        elif IS_TEGRA:
             if l4t_version.major >= 38:  # JetPack 7
                 cuda_architectures = [87]
             elif l4t_version.major >= 36:  # JetPack 6
@@ -324,13 +332,6 @@ def get_cuda_arch(l4t_version: str=None, cuda_version: str=None, format=list):
                 cuda_architectures = [72, 87]
             elif l4t_version.major == 32:  # JetPack 4
                 cuda_architectures = [53, 62, 72]
-        elif IS_SBSA:
-            if l4t_version.major >= 38:
-                cuda_architectures = [87, 110, 121]  # Ampere Orin, Thor 110, Spark 121
-            else:
-                cuda_architectures = [87, 90, 100, 103, 121]  # Ampere Orin, Hopper GH200 90, Blackwell GB200 100
-                if cuda_version >= Version('13.0'):
-                    cuda_architectures += [110] # Thor 110, Spark 121
     else:
         cuda_architectures = [
             80, 86,  # Ampere

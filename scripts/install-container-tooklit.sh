@@ -49,7 +49,11 @@ echo \
 safe_apt_install "sudo apt-get update" 5
 safe_apt_install "sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin" 5
 
-echo Docker service installed
+# Start and enable Docker service
+sudo systemctl start docker
+sudo systemctl enable docker
+
+echo Docker service installed and started
 
 # on you host PC, first download the following Debian packages and SCP transfer them to the Jetson
 # $ cd ~/Downloads/nvidia/sdkm_downloads
@@ -59,4 +63,9 @@ echo Docker service installed
 #       nvidia-container-toolkit-base_1.18.0~rc.1-1_arm64.deb \
 #       jetson@10.110.51.116:/home/jetson/Downloads/
 
+scp nvidia@10.110.51.47:/home/nvidia/Downloads/nvidia/sdkm_downloads/libnvidia-container1_1.18.0~rc.1-1_arm64.deb \
+    nvidia@10.110.51.47:/home/nvidia/Downloads/nvidia/sdkm_downloads/libnvidia-container-tools_1.18.0~rc.1-1_arm64.deb \
+    nvidia@10.110.51.47:/home/nvidia/Downloads/nvidia/sdkm_downloads/nvidia-container-toolkit_1.18.0~rc.1-1_arm64.deb \
+    nvidia@10.110.51.47:/home/nvidia/Downloads/nvidia/sdkm_downloads/nvidia-container-toolkit-base_1.18.0~rc.1-1_arm64.deb \
+    ~/Downloads/
 cd ~/Downloads && sudo dpkg -i libnvidia-container1_1.18.0~rc.1-1_arm64.deb libnvidia-container-tools_1.18.0~rc.1-1_arm64.deb nvidia-container-toolkit_1.18.0~rc.1-1_arm64.deb nvidia-container-toolkit-base_1.18.0~rc.1-1_arm64.deb
