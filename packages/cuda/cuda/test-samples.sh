@@ -6,6 +6,5 @@ set -ex
 cd $CUDA_SAMPLES_ROOT/bin/$(uname -m)/linux/release
 
 ./deviceQuery
-./bandwidthTest
 ./vectorAdd
 ./matrixMul

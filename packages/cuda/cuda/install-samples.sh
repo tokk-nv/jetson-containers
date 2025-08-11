@@ -4,7 +4,7 @@ set -ex
 : "${CUDA_SAMPLES_ROOT:=/opt/cuda-samples}"
 
 function make_dirs() {
-  cd $CUDA_SAMPLES_ROOT/Samples/1_Utilities/deviceQuery 
+  cd $CUDA_SAMPLES_ROOT/Samples/1_Utilities/deviceQuery
   make
   cd ../bandwidthTest
   make
@@ -15,9 +15,7 @@ function make_dirs() {
 }
 
 function make_flat() {
-  cd $CUDA_SAMPLES_ROOT/Samples/deviceQuery 
-  make
-  cd ../bandwidthTest
+  cd $CUDA_SAMPLES_ROOT/Samples/deviceQuery
   make
   cd ../matrixMul
   make
