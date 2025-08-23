@@ -5,13 +5,14 @@
 # test: [test.sh]
 #---
 ARG BASE_IMAGE
+ARG GITHUB_TOKEN
 FROM ${BASE_IMAGE}
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     unzip wget curl jq
 
-RUN LATEST_VERSION=$(curl -s https://api.github.com/repos/ninja-build/ninja/releases/latest | jq -r .tag_name) && \
+RUN LATEST_VERSION=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/ninja-build/ninja/releases/latest | jq -r .tag_name) && \
     wget -q "https://github.com/ninja-build/ninja/releases/download/${LATEST_VERSION}/ninja-linux-aarch64.zip" && \
     unzip -o ninja-linux-aarch64.zip -d /usr/bin/ && \
     rm ninja-linux-aarch64.zip && \

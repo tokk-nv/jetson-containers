@@ -195,6 +195,11 @@ def build_container(
 
                 cmd += f"  --build-arg BASE_IMAGE={base}" + _NEWLINE_
 
+                # Automatically pass GITHUB_TOKEN if available in environment
+                github_token = os.environ.get('GITHUB_TOKEN')
+                if github_token:
+                    cmd += f"  --build-arg GITHUB_TOKEN={github_token}" + _NEWLINE_
+
                 if 'build_args' in pkg:
                     cmd += ''.join([f"  --build-arg {key}=\"{value}\"" + _NEWLINE_ for key, value in pkg['build_args'].items()])
 
