@@ -10,13 +10,13 @@ find_available_port() {
 
     while [ $port -lt 65535 ]; do
         # Try to bind to the port using a temporary netcat process
-        if timeout 1 bash -c "echo >/dev/tcp/127.0.0.1/$port" 2>/dev/null; then
-            # Port is in use, try next
-            port=$((port + 1))
-        else
-            # Port is available
+        if ! timeout 1 bash -c "echo >/dev/tcp/127.0.0.1/$port" 2>/dev/null; then
+            # Port is available (connection failed = port free)
             echo $port
             return 0
+        else
+            # Port is in use (connection succeeded = port occupied)
+            port=$((port + 1))
         fi
     done
 
