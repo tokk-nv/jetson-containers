@@ -24,6 +24,14 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
 		llvm-18 \
 		llvm-18-dev \
+		build-essential \
+		cmake \
+		ninja-build \
+		libtinfo-dev \
+		zlib1g-dev \
+		libedit-dev \
+		libxml2-dev \
+		pkg-config \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 # copy installation and build scripts for TVM
