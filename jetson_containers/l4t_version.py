@@ -531,12 +531,16 @@ def _get_platform_architecture():
 
     if host_arch == "aarch64":
         try:
-            uname_output = subprocess.check_output(["uname", "-a"], encoding="utf-8")
-            if TEGRA in uname_output:
+            gpu_names = subprocess.check_output(
+                ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+                encoding="utf-8"
+            )
+            if "nvgpu" not in gpu_names:
+                return os.environ.get('CUDA_ARCH', host_arch)
+            else:
                 return os.environ.get('CUDA_ARCH', f"{TEGRA}-{host_arch}")
         except Exception as e:
-            print(f"[warn] Failed to run uname: {e}")
-
+            return os.environ.get('CUDA_ARCH', f"{TEGRA}-{host_arch}")
     return os.environ.get('CUDA_ARCH', host_arch)
 
 
