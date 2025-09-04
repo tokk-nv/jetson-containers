@@ -1,4 +1,4 @@
-name: vllm (dev)
+name: nccl (dev)
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ on:
 jobs:
   test-package-orin:
     runs-on: [self-hosted, linux, arm64, jetson, orin]
-    name: "Package Build Test (Orin)"
+    name: "Package Build Test (orin)"
 
     steps:
       - name: Pre-checkout cleanup
@@ -33,7 +33,6 @@ jobs:
           repository: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && inputs.fork_repo || github.repository }}
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}
 
-
       - name: Display system info
         run: ./.github/scripts/system-info.sh
 
@@ -46,13 +45,13 @@ jobs:
       - name: Show git repository state
         run: ./.github/scripts/git-status.sh
 
-      - name: Test build vllm package on Orin
+      - name: Test build nccl package on orin
         id: package-test
-        run: ./.github/scripts/build-package.sh vllm
+        run: ./.github/scripts/build-package.sh nccl
 
       - name: Analyze build results
         if: always()
-        run: ./.github/scripts/analyze-results.sh vllm ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }}
+        run: ./.github/scripts/analyze-results.sh nccl ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }}
 
       - name: Test build results
-        run: ./.github/scripts/test-results-summary.sh vllm ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }} ${{ steps.package-test.outputs.failure_phase }} ${{ steps.package-test.outputs.failure_stage }} ${{ steps.package-test.outputs.failure_component }}
+        run: ./.github/scripts/test-results-summary.sh nccl ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }} ${{ steps.package-test.outputs.failure_phase }} ${{ steps.package-test.outputs.failure_stage }} ${{ steps.package-test.outputs.failure_component }}
