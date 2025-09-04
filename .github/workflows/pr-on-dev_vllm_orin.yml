@@ -39,13 +39,12 @@ jobs:
           echo "Pre-checkout cleanup completed"
 
       - name: Checkout PR or Fork
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && inputs.fork_repo || github.repository }}
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}
-          clean: false
 
       - name: Display system info
         run: |
