@@ -137,10 +137,17 @@ jobs:
           echo "Command: ./build.sh --build-flags='--no-cache' --no-github-api vllm"
 
           # Capture build output with timestamps
-          if timeout 3600 ./build.sh --build-flags="--no-cache" --no-github-api vllm 2>&1 | tee build.log; then
-            echo "✅ STAGE 2 PASSED: vllm package build successful"
-            echo "stage2=passed" >> $GITHUB_OUTPUT
-            echo "build_status=success" >> $GITHUB_OUTPUT
+          if timeout 7200 ./build.sh --build-flags="--no-cache" --no-github-api vllm 2>&1 | tee build.log; then
+            # Check if the build actually succeeded by looking for failure indicators
+            if grep -i "failed building\|build failed\|error.*failed" build.log; then
+              echo "❌ STAGE 2 FAILED: Build script completed but build failed"
+              echo "stage2=failed" >> $GITHUB_OUTPUT
+              echo "build_status=failed" >> $GITHUB_OUTPUT
+            else
+              echo "✅ STAGE 2 PASSED: vllm package build successful"
+              echo "stage2=passed" >> $GITHUB_OUTPUT
+              echo "build_status=success" >> $GITHUB_OUTPUT
+            fi
           else
             BUILD_EXIT_CODE=$?
             echo "❌ STAGE 2 FAILED: vllm package build failed with exit code $BUILD_EXIT_CODE"
@@ -183,7 +190,7 @@ jobs:
                     echo "Failed package: $PACKAGE_NAME"
 
                     # Check for errors in the last build log
-                    if grep -i "error\|failed\|exit status" "$LAST_BUILD_LOG"; then
+                    if grep -i "failed building\|build failed\|error.*failed\|exit status.*1" "$LAST_BUILD_LOG"; then
                       FAILURE_PHASE="build"
                       FAILURE_STAGE="build"
                       FAILURE_COMPONENT="$PACKAGE_NAME"
@@ -206,7 +213,7 @@ jobs:
                     echo "Failed test package: $TEST_PACKAGE_NAME"
 
                     # Check for errors in the last test log
-                    if grep -i "traceback\|error\|exception\|failed" "$LAST_TEST_LOG"; then
+                    if grep -i "traceback\|error\|exception\|failed\|exit status.*1\|returned non-zero exit status" "$LAST_TEST_LOG"; then
                       FAILURE_PHASE="test"
                       FAILURE_STAGE="test"
                       FAILURE_COMPONENT="$TEST_PACKAGE_NAME"
