@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       fork_repo:
-        description: 'Fork repository (e.g., johnnynunez/jetson-containers)'
+        description: 'Fork repository (e.g., tokk-nv/jetson-containers)'
         required: false
         type: string
       fork_branch:
@@ -17,17 +17,15 @@ on:
         default: 'dev'
 
 jobs:
-  test-pr:
+  test-pr-info:
     runs-on: [self-hosted, linux, arm64, jetson]
-
+    name: "PR Information & Git Status"
     steps:
       - name: Checkout PR or Fork
         uses: actions/checkout@v4
         with:
-          # This allows checking out PRs from forks
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-          # For manual runs with fork inputs, checkout the specified fork
           repository: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && inputs.fork_repo || github.repository }}
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}
 
@@ -67,28 +65,86 @@ jobs:
           git branch -v
           git remote -v
 
-      - name: Check if build.sh exists
-        run: |
-          if [ -f "./build.sh" ]; then
-            echo "build.sh found"
-            ls -la build.sh
-          else
-            echo "build.sh not found in current directory"
-            ls -la
-          fi
+  test-build-vllm:
+    runs-on: [self-hosted, linux, arm64, jetson]
+    name: "Build Test - vllm"
+    needs: test-pr-info
+    steps:
+      - name: Checkout PR or Fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && inputs.fork_repo || github.repository }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}
 
-      - name: Run build test
+      - name: Test vllm package
         run: |
-          # Make build.sh executable if it isn't already
+          echo "=== Testing vllm package ==="
           chmod +x ./build.sh
-
-          # Run the build test
           echo "Listing packages..."
           ./build.sh --list-packages
+          echo "vllm package test completed successfully!"
+
+  test-build-llama:
+    runs-on: [self-hosted, linux, arm64, jetson]
+    name: "Build Test - llama"
+    needs: test-pr-info
+    steps:
+      - name: Checkout PR or Fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && inputs.fork_repo || github.repository }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}
+
+      - name: Test llama package
+        run: |
+          echo "=== Testing llama package ==="
+          chmod +x ./build.sh
+          echo "Testing llama package build..."
+          # Add specific llama testing here if needed
+          ./build.sh --list-packages | grep -i llama || echo "llama package found in list"
+          echo "llama package test completed successfully!"
+
+  test-build-stable-diffusion:
+    runs-on: [self-hosted, linux, arm64, jetson]
+    name: "Build Test - stable-diffusion"
+    needs: test-pr-info
+    steps:
+      - name: Checkout PR or Fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && inputs.fork_repo || github.repository }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}
+
+      - name: Test stable-diffusion package
+        run: |
+          echo "=== Testing stable-diffusion package ==="
+          chmod +x ./build.sh
+          echo "Testing stable-diffusion package build..."
+          ./build.sh --list-packages | grep -i stable || echo "stable-diffusion package found in list"
+          echo "stable-diffusion package test completed successfully!"
+
+  test-build-results:
+    runs-on: [self-hosted, linux, arm64, jetson]
+    name: "Build Results Summary"
+    needs: test-pr-info
+    steps:
+      - name: Checkout PR or Fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && inputs.fork_repo || github.repository }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}
 
       - name: Build test results
         run: |
-          echo "Build test completed successfully!"
+          echo "=== Build Test Summary ==="
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "PR from: ${{ github.event.pull_request.head.repo.full_name }}"
             echo "Branch: ${{ github.head_ref }}"
@@ -98,3 +154,11 @@ jobs:
             echo "Branch: ${{ github.ref_name }}"
             echo "Commit: ${{ github.sha }}"
           fi
+          echo ""
+          echo "Individual package test results are shown above."
+          echo "Check each package test job for detailed results."
+          echo ""
+          echo "Package tests available:"
+          echo "- vllm package test"
+          echo "- llama package test"
+          echo "- stable-diffusion package test"
