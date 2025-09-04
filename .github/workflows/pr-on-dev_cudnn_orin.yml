@@ -114,7 +114,7 @@ jobs:
           echo "=== Recent Git History (last 10 commits) ==="
           git log --oneline -10
 
-      - name: Test cudnn package on Orin
+      - name: Test build cudnn package on Orin
         id: cudnn-test
         run: |
           echo "=== Testing cudnn package on Jetson Orin ==="
@@ -283,9 +283,9 @@ jobs:
             echo "Check the build log above for detailed error information"
           fi
 
-      - name: Test results
+      - name: Test build results
         run: |
-          echo "=== cudnn Test Results Summary ==="
+          echo "=== cudnn Build Test Results Summary ==="
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "PR from: ${{ github.event.pull_request.head.repo.full_name }}"
             echo "Branch: ${{ github.head_ref }}"

@@ -114,7 +114,7 @@ jobs:
           echo "=== Recent Git History (last 10 commits) ==="
           git log --oneline -10
 
-      - name: Test nccl package on Orin
+      - name: Test build nccl package on Orin
         id: nccl-test
         run: |
           echo "=== Testing nccl package on Jetson Orin ==="
@@ -283,9 +283,9 @@ jobs:
             echo "Check the build log above for detailed error information"
           fi
 
-      - name: Test results
+      - name: Test build results
         run: |
-          echo "=== nccl Test Results Summary ==="
+          echo "=== nccl Build Test Results Summary ==="
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "PR from: ${{ github.event.pull_request.head.repo.full_name }}"
             echo "Branch: ${{ github.head_ref }}"

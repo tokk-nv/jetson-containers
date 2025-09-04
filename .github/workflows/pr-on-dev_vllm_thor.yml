@@ -48,7 +48,7 @@ jobs:
           echo "=== Recent Git History (last 10 commits) ==="
           git log --oneline -10
 
-      - name: Test vllm package on Thor
+      - name: Test build vllm package on Thor
         run: |
           echo "=== Testing vllm package on Jetson Thor ==="
           chmod +x ./build.sh
@@ -59,7 +59,7 @@ jobs:
           ./build.sh --build-flags="--no-cache" --no-github-api vllm
           echo "✅ vllm package test completed successfully on Thor!"
 
-      - name: Test results
+      - name: Test build results
         run: |
           echo "=== vllm Test Results ==="
           if [ "${{ github.event_name }}" = "pull_request" ]; then

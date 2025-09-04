@@ -114,7 +114,7 @@ jobs:
           echo "=== Recent Git History (last 10 commits) ==="
           git log --oneline -10
 
-      - name: Test llamacpp package on Orin
+      - name: Test build llamacpp package on Orin
         id: llamacpp-test
         run: |
           echo "=== Testing llamacpp package on Jetson Orin ==="
@@ -283,9 +283,9 @@ jobs:
             echo "Check the build log above for detailed error information"
           fi
 
-      - name: Test results
+      - name: Test build results
         run: |
-          echo "=== llama_cpp Test Results Summary ==="
+          echo "=== llama_cpp Build Test Results Summary ==="
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "PR from: ${{ github.event.pull_request.head.repo.full_name }}"
             echo "Branch: ${{ github.head_ref }}"

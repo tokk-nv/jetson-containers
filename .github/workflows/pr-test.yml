@@ -79,7 +79,7 @@ jobs:
           repository: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && inputs.fork_repo || github.repository }}
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}
 
-      - name: Test vllm package
+      - name: Test build vllm package
         run: |
           echo "=== Testing vllm package ==="
           chmod +x ./build.sh
@@ -100,7 +100,7 @@ jobs:
           repository: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && inputs.fork_repo || github.repository }}
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}
 
-      - name: Test llama package
+      - name: Test build llama package
         run: |
           echo "=== Testing llama package ==="
           chmod +x ./build.sh
@@ -122,7 +122,7 @@ jobs:
           repository: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && inputs.fork_repo || github.repository }}
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}
 
-      - name: Test stable-diffusion package
+      - name: Test build stable-diffusion package
         run: |
           echo "=== Testing stable-diffusion package ==="
           chmod +x ./build.sh

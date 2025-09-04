@@ -114,7 +114,7 @@ jobs:
           echo "=== Recent Git History (last 10 commits) ==="
           git log --oneline -10
 
-      - name: Test piper1-tts package on Orin
+      - name: Test build piper1-tts package on Orin
         id: piper1-tts-test
         run: |
           echo "=== Testing piper1-tts package on Jetson Orin ==="
@@ -283,9 +283,9 @@ jobs:
             echo "Check the build log above for detailed error information"
           fi
 
-      - name: Test results
+      - name: Test build results
         run: |
-          echo "=== piper1-tts Test Results Summary ==="
+          echo "=== piper1-tts Build Test Results Summary ==="
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "PR from: ${{ github.event.pull_request.head.repo.full_name }}"
             echo "Branch: ${{ github.head_ref }}"
