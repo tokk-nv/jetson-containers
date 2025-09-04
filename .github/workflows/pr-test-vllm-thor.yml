@@ -1,9 +1,10 @@
 name: PR Test - vllm (Thor)
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches: [ dev ]
+  # Disabled - no Thor runner available
+  # pull_request:
+  #   types: [opened, synchronize, reopened]
+  #   branches: [ dev ]
   workflow_dispatch:
     inputs:
       fork_repo:
