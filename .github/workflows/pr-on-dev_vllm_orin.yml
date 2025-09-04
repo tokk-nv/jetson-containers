@@ -26,6 +26,11 @@ jobs:
         run: |
           echo "=== Working Directory Debug ==="
           echo "Current working directory: $(pwd)"
+          echo "Git commit: $(git rev-parse HEAD)"
+          echo "Git branch: $(git branch --show-current)"
+          echo "Git status:"
+          git status
+          echo ""
           echo "Contents of current directory:"
           ls -la
           echo ""
@@ -46,7 +51,8 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && inputs.fork_repo || github.repository }}
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}./github/scripts
+
 
       - name: Display system info
         run: bash .github/scripts/system-info.sh
