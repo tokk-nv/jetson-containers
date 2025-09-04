@@ -1,0 +1,59 @@
+name: Pull Request Test
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [ main, master, dev ]
+
+jobs:
+  test-pr:
+    runs-on: [self-hosted, linux, arm64, jetson]
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          # This allows checking out PRs from forks
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get PR information
+        id: pr-info
+        run: |
+          echo "PR number: ${{ github.event.number }}"
+          echo "PR head ref: ${{ github.head_ref }}"
+          echo "PR base ref: ${{ github.base_ref }}"
+          echo "PR head SHA: ${{ github.event.pull_request.head.sha }}"
+          echo "PR head repo: ${{ github.event.pull_request.head.repo.full_name }}"
+
+      - name: Display system info
+        run: |
+          echo "Hello from $HOSTNAME running on Jetson Orin!"
+          uname -a
+          nvidia-smi || echo "No nvidia-smi (Jetson usually)"
+
+      - name: Check if build.sh exists
+        run: |
+          if [ -f "./build.sh" ]; then
+            echo "build.sh found"
+            ls -la build.sh
+          else
+            echo "build.sh not found in current directory"
+            ls -la
+          fi
+
+      - name: Run build test
+        run: |
+          # Make build.sh executable if it isn't already
+          chmod +x ./build.sh
+
+          # Run the build test as specified
+          echo "Running build test for vllm..."
+          ./build.sh --build-flags="--no-cache" --no-github-api vllm
+
+      - name: Build test results
+        run: |
+          echo "Build test completed successfully!"
+          echo "PR from: ${{ github.event.pull_request.head.repo.full_name }}"
+          echo "Branch: ${{ github.head_ref }}"
+          echo "Commit: ${{ github.event.pull_request.head.sha }}"
