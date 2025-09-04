@@ -22,17 +22,6 @@ jobs:
     name: "Package Build Test (Orin)"
 
     steps:
-      - name: Pre-checkout cleanup
-        run: bash .github/scripts/pre-checkout-cleanup.sh
-
-      - name: Checkout PR or Fork
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && inputs.fork_repo || github.repository }}
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}
-
       - name: Debug working directory
         run: |
           echo "=== Working Directory Debug ==="
@@ -47,6 +36,17 @@ jobs:
           ls -la .github/scripts/ || echo "No .github/scripts directory found"
           echo ""
           echo "PATH: $PATH"
+
+      - name: Pre-checkout cleanup
+        run: bash .github/scripts/pre-checkout-cleanup.sh
+
+      - name: Checkout PR or Fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && inputs.fork_repo || github.repository }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}
 
       - name: Display system info
         run: bash .github/scripts/system-info.sh
