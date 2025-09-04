@@ -27,9 +27,16 @@ jobs:
           echo "=== Pre-checkout Cleanup ==="
           echo "Cleaning up any permission-restricted directories before checkout..."
 
-          # Clean up directories that may have restricted permissions
-          # Don't remove .git directory - let checkout handle it
+          # Specifically target the problematic data/models directory
+          echo "Removing problematic data/models directory..."
+          find /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/data/models -type f -exec rm -f {} \; 2>/dev/null || echo "Some files in data/models couldn't be removed"
+          find /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/data/models -type d -exec rmdir {} \; 2>/dev/null || echo "Some directories in data/models couldn't be removed"
+          rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/data/models || echo "data/models cleanup failed"
+
+          echo "Removing entire data directory..."
           rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/data || echo "Data cleanup failed"
+
+          echo "Removing logs directory..."
           rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/logs || echo "Logs cleanup failed"
 
           # Reset permissions on work directory
