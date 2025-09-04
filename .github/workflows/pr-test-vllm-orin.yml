@@ -26,14 +26,16 @@ jobs:
         run: |
           echo "=== Pre-checkout Cleanup ==="
           echo "Cleaning up any permission-restricted directories before checkout..."
-          sudo rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/data || echo "Data cleanup failed"
-          sudo rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/logs || echo "Logs cleanup failed"
-          sudo rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/.git || echo "Git cleanup failed"
 
-          # Reset permissions on work directory
-          sudo chown -R jetson:jetson /home/jetson/actions-runner/_work/jetson-containers/ || echo "Permission reset failed"
+          # Try to clean up directories (may fail due to permissions)
+          rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/data || echo "Data cleanup failed (permission denied)"
+          rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/logs || echo "Logs cleanup failed (permission denied)"
+          rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/.git || echo "Git cleanup failed (permission denied)"
 
-          echo "Pre-checkout cleanup completed"
+          # Try to change permissions (may fail)
+          chmod -R 755 /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/ 2>/dev/null || echo "Permission change failed"
+
+          echo "Pre-checkout cleanup completed (some operations may have failed due to permissions)"
 
       - name: Checkout PR or Fork
         uses: actions/checkout@v4
