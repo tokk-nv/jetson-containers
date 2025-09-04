@@ -5,27 +5,49 @@ on:
     types: [opened, synchronize, reopened]
     branches: [ dev ]
   workflow_dispatch:
+    inputs:
+      fork_repo:
+        description: 'Fork repository (e.g., johnnynunez/jetson-containers)'
+        required: false
+        type: string
+      fork_branch:
+        description: 'Branch from fork to test (e.g., dev)'
+        required: false
+        type: string
+        default: 'dev'
 
 jobs:
   test-pr:
     runs-on: [self-hosted, linux, arm64, jetson]
 
     steps:
-      - name: Checkout PR
+      - name: Checkout PR or Fork
         uses: actions/checkout@v4
         with:
           # This allows checking out PRs from forks
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          # For manual runs with fork inputs, checkout the specified fork
+          ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && format('repository: {0}', inputs.fork_repo) || '' }}
+          ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && format('ref: {0}', inputs.fork_branch) || '' }}
 
-      - name: Get PR information
+      - name: Get PR or Manual Run information
         id: pr-info
         run: |
-          echo "PR number: ${{ github.event.number }}"
-          echo "PR head ref: ${{ github.head_ref }}"
-          echo "PR base ref: ${{ github.base_ref }}"
-          echo "PR head SHA: ${{ github.event.pull_request.head.sha }}"
-          echo "PR head repo: ${{ github.event.pull_request.head.repo.full_name }}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "=== Pull Request Information ==="
+            echo "PR number: ${{ github.event.number }}"
+            echo "PR head ref: ${{ github.head_ref }}"
+            echo "PR base ref: ${{ github.base_ref }}"
+            echo "PR head SHA: ${{ github.event.pull_request.head.sha }}"
+            echo "PR head repo: ${{ github.event.pull_request.head.repo.full_name }}"
+          else
+            echo "=== Manual Run Information ==="
+            echo "Triggered manually from: ${{ github.ref_name }}"
+            echo "Fork repository: ${{ inputs.fork_repo || 'Not specified (using current repo)' }}"
+            echo "Fork branch: ${{ inputs.fork_branch || 'Not specified (using current branch)' }}"
+            echo "Workflow run by: ${{ github.actor }}"
+          fi
 
       - name: Display system info
         run: |
