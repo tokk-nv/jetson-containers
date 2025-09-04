@@ -3,6 +3,10 @@ set -euxo pipefail
 
 echo "Installing NVIDIA NCCL $NCCL_VERSION"
 
+if [[ "$IS_SBSA" == "True" ]]; then
+  echo ">>>>>>>>>>>>>>>>>>>> IS_SBSA is True <<<<<<<<<<<<<<<<<<<<"
+fi
+
 if [[ "$CUDA_ARCH" == "aarch64" ]]; then
   DEB="nccl-local-repo-${DISTRO}-${NCCL_VERSION}-cuda13.0_1.0-1_arm64.deb"
 
