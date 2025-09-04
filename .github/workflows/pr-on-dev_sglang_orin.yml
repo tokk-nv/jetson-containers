@@ -1,4 +1,4 @@
-name: PR Test - nccl (Orin)
+name: [Orin] sglang - PR validation (dev)
 
 on:
   pull_request:
@@ -17,9 +17,9 @@ on:
         default: 'dev'
 
 jobs:
-  test-nccl-orin:
+  test-sglang-orin:
     runs-on: [self-hosted, linux, arm64, jetson, orin]
-    name: "nccl Package Test (Orin)"
+    name: "sglang Package Test (Orin)"
 
     steps:
       - name: Pre-checkout cleanup
@@ -114,10 +114,10 @@ jobs:
           echo "=== Recent Git History (last 10 commits) ==="
           git log --oneline -10
 
-      - name: Test nccl package on Orin
-        id: nccl-test
+      - name: Test sglang package on Orin
+        id: sglang-test
         run: |
-          echo "=== Testing nccl package on Jetson Orin ==="
+          echo "=== Testing sglang package on Jetson Orin ==="
           chmod +x ./build.sh
 
           # Stage 1: List packages
@@ -131,26 +131,26 @@ jobs:
             exit 1
           fi
 
-          # Stage 2: Build nccl package
+          # Stage 2: Build sglang package
           echo ""
-          echo "🔨 STAGE 2: Building nccl package..."
-          echo "Command: ./build.sh --build-flags='--no-cache' --no-github-api nccl"
+          echo "🔨 STAGE 2: Building sglang package..."
+          echo "Command: ./build.sh --build-flags='--no-cache' --no-github-api sglang"
 
           # Capture build output with timestamps
-          if timeout 7200 ./build.sh --build-flags="--no-cache" --no-github-api nccl 2>&1 | tee build.log; then
+          if timeout 7200 ./build.sh --build-flags="--no-cache" --no-github-api sglang 2>&1 | tee build.log; then
             # Check if the build actually succeeded by looking for failure indicators
             if grep -i "failed building\|build failed\|error.*failed" build.log; then
               echo "❌ STAGE 2 FAILED: Build script completed but build failed"
               echo "stage2=failed" >> $GITHUB_OUTPUT
               echo "build_status=failed" >> $GITHUB_OUTPUT
             else
-              echo "✅ STAGE 2 PASSED: nccl package build successful"
+              echo "✅ STAGE 2 PASSED: sglang package build successful"
               echo "stage2=passed" >> $GITHUB_OUTPUT
               echo "build_status=success" >> $GITHUB_OUTPUT
             fi
           else
             BUILD_EXIT_CODE=$?
-            echo "❌ STAGE 2 FAILED: nccl package build failed with exit code $BUILD_EXIT_CODE"
+            echo "❌ STAGE 2 FAILED: sglang package build failed with exit code $BUILD_EXIT_CODE"
             echo "stage2=failed" >> $GITHUB_OUTPUT
             echo "build_status=failed" >> $GITHUB_OUTPUT
 
@@ -266,26 +266,26 @@ jobs:
             exit $BUILD_EXIT_CODE
           fi
 
-          echo "✅ nccl package test completed successfully on Orin!"
+          echo "✅ sglang package test completed successfully on Orin!"
 
       - name: Analyze build results
         if: always()
         run: |
           echo "=== Build Analysis ==="
-          echo "Stage 1 (Package Listing): ${{ steps.nccl-test.outputs.stage1 }}"
-          echo "Stage 2 (Package Build): ${{ steps.nccl-test.outputs.stage2 }}"
-          echo "Overall Build Status: ${{ steps.nccl-test.outputs.build_status }}"
+          echo "Stage 1 (Package Listing): ${{ steps.sglang-test.outputs.stage1 }}"
+          echo "Stage 2 (Package Build): ${{ steps.sglang-test.outputs.stage2 }}"
+          echo "Overall Build Status: ${{ steps.sglang-test.outputs.build_status }}"
 
-          if [ "${{ steps.nccl-test.outputs.build_status }}" = "success" ]; then
-            echo "🎉 SUCCESS: nccl package built successfully on Jetson Orin"
+          if [ "${{ steps.sglang-test.outputs.build_status }}" = "success" ]; then
+            echo "🎉 SUCCESS: sglang package built successfully on Jetson Orin"
           else
-            echo "💥 FAILURE: nccl package build failed on Jetson Orin"
+            echo "💥 FAILURE: sglang package build failed on Jetson Orin"
             echo "Check the build log above for detailed error information"
           fi
 
       - name: Test results
         run: |
-          echo "=== nccl Test Results Summary ==="
+          echo "=== sglang Test Results Summary ==="
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "PR from: ${{ github.event.pull_request.head.repo.full_name }}"
             echo "Branch: ${{ github.head_ref }}"
@@ -297,19 +297,19 @@ jobs:
           fi
           echo ""
           echo "Hardware: Jetson Orin"
-          echo "Package: nccl"
-          echo "Stage 1 (Package Listing): ${{ steps.nccl-test.outputs.stage1 }}"
-          echo "Stage 2 (Package Build): ${{ steps.nccl-test.outputs.stage2 }}"
-          echo "Overall Status: ${{ steps.nccl-test.outputs.build_status }}"
+          echo "Package: sglang"
+          echo "Stage 1 (Package Listing): ${{ steps.sglang-test.outputs.stage1 }}"
+          echo "Stage 2 (Package Build): ${{ steps.sglang-test.outputs.stage2 }}"
+          echo "Overall Status: ${{ steps.sglang-test.outputs.build_status }}"
 
-          if [ "${{ steps.nccl-test.outputs.build_status }}" = "success" ]; then
-            echo "🎉 RESULT: nccl package SUCCESS on Jetson Orin"
+          if [ "${{ steps.sglang-test.outputs.build_status }}" = "success" ]; then
+            echo "🎉 RESULT: sglang package SUCCESS on Jetson Orin"
           else
-            echo "💥 RESULT: nccl package FAILED on Jetson Orin"
-            echo "Failure Phase: ${{ steps.nccl-test.outputs.failure_phase }}"
-            echo "Failure Stage: ${{ steps.nccl-test.outputs.failure_stage }}"
-            echo "Failure Component: ${{ steps.nccl-test.outputs.failure_component }}"
+            echo "💥 RESULT: sglang package FAILED on Jetson Orin"
+            echo "Failure Phase: ${{ steps.sglang-test.outputs.failure_phase }}"
+            echo "Failure Stage: ${{ steps.sglang-test.outputs.failure_stage }}"
+            echo "Failure Component: ${{ steps.sglang-test.outputs.failure_component }}"
             echo ""
-            echo "❌ nccl Package Test (Orin) - FAILED in STAGE: ${{ steps.nccl-test.outputs.failure_phase }} > ${{ steps.nccl-test.outputs.failure_stage }} > ${{ steps.nccl-test.outputs.failure_component }}"
+            echo "❌ sglang Package Test (Orin) - FAILED in STAGE: ${{ steps.sglang-test.outputs.failure_phase }} > ${{ steps.sglang-test.outputs.failure_stage }} > ${{ steps.sglang-test.outputs.failure_component }}"
             echo "Check build logs above for detailed failure information"
           fi

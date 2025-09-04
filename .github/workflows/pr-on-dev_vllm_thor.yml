@@ -1,4 +1,4 @@
-name: PR Test - vllm (Thor)
+name: [Thor] vllm - PR validation (dev)
 
 on:
   # Disabled - no Thor runner available

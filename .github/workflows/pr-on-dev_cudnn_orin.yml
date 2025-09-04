@@ -1,4 +1,4 @@
-name: PR Test - vllm (Orin)
+name: [Orin] cudnn - PR validation (dev)
 
 on:
   pull_request:
@@ -17,9 +17,9 @@ on:
         default: 'dev'
 
 jobs:
-  test-vllm-orin:
+  test-cudnn-orin:
     runs-on: [self-hosted, linux, arm64, jetson, orin]
-    name: "vllm Package Test (Orin)"
+    name: "cudnn Package Test (Orin)"
 
     steps:
       - name: Pre-checkout cleanup
@@ -114,10 +114,10 @@ jobs:
           echo "=== Recent Git History (last 10 commits) ==="
           git log --oneline -10
 
-      - name: Test vllm package on Orin
-        id: vllm-test
+      - name: Test cudnn package on Orin
+        id: cudnn-test
         run: |
-          echo "=== Testing vllm package on Jetson Orin ==="
+          echo "=== Testing cudnn package on Jetson Orin ==="
           chmod +x ./build.sh
 
           # Stage 1: List packages
@@ -131,26 +131,26 @@ jobs:
             exit 1
           fi
 
-          # Stage 2: Build vllm package
+          # Stage 2: Build cudnn package
           echo ""
-          echo "🔨 STAGE 2: Building vllm package..."
-          echo "Command: ./build.sh --build-flags='--no-cache' --no-github-api vllm"
+          echo "🔨 STAGE 2: Building cudnn package..."
+          echo "Command: ./build.sh --build-flags='--no-cache' --no-github-api cudnn"
 
           # Capture build output with timestamps
-          if timeout 7200 ./build.sh --build-flags="--no-cache" --no-github-api vllm 2>&1 | tee build.log; then
+          if timeout 7200 ./build.sh --build-flags="--no-cache" --no-github-api cudnn 2>&1 | tee build.log; then
             # Check if the build actually succeeded by looking for failure indicators
             if grep -i "failed building\|build failed\|error.*failed" build.log; then
               echo "❌ STAGE 2 FAILED: Build script completed but build failed"
               echo "stage2=failed" >> $GITHUB_OUTPUT
               echo "build_status=failed" >> $GITHUB_OUTPUT
             else
-              echo "✅ STAGE 2 PASSED: vllm package build successful"
+              echo "✅ STAGE 2 PASSED: cudnn package build successful"
               echo "stage2=passed" >> $GITHUB_OUTPUT
               echo "build_status=success" >> $GITHUB_OUTPUT
             fi
           else
             BUILD_EXIT_CODE=$?
-            echo "❌ STAGE 2 FAILED: vllm package build failed with exit code $BUILD_EXIT_CODE"
+            echo "❌ STAGE 2 FAILED: cudnn package build failed with exit code $BUILD_EXIT_CODE"
             echo "stage2=failed" >> $GITHUB_OUTPUT
             echo "build_status=failed" >> $GITHUB_OUTPUT
 
@@ -266,26 +266,26 @@ jobs:
             exit $BUILD_EXIT_CODE
           fi
 
-          echo "✅ vllm package test completed successfully on Orin!"
+          echo "✅ cudnn package test completed successfully on Orin!"
 
       - name: Analyze build results
         if: always()
         run: |
           echo "=== Build Analysis ==="
-          echo "Stage 1 (Package Listing): ${{ steps.vllm-test.outputs.stage1 }}"
-          echo "Stage 2 (Package Build): ${{ steps.vllm-test.outputs.stage2 }}"
-          echo "Overall Build Status: ${{ steps.vllm-test.outputs.build_status }}"
+          echo "Stage 1 (Package Listing): ${{ steps.cudnn-test.outputs.stage1 }}"
+          echo "Stage 2 (Package Build): ${{ steps.cudnn-test.outputs.stage2 }}"
+          echo "Overall Build Status: ${{ steps.cudnn-test.outputs.build_status }}"
 
-          if [ "${{ steps.vllm-test.outputs.build_status }}" = "success" ]; then
-            echo "🎉 SUCCESS: vllm package built successfully on Jetson Orin"
+          if [ "${{ steps.cudnn-test.outputs.build_status }}" = "success" ]; then
+            echo "🎉 SUCCESS: cudnn package built successfully on Jetson Orin"
           else
-            echo "💥 FAILURE: vllm package build failed on Jetson Orin"
+            echo "💥 FAILURE: cudnn package build failed on Jetson Orin"
             echo "Check the build log above for detailed error information"
           fi
 
       - name: Test results
         run: |
-          echo "=== vllm Test Results Summary ==="
+          echo "=== cudnn Test Results Summary ==="
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "PR from: ${{ github.event.pull_request.head.repo.full_name }}"
             echo "Branch: ${{ github.head_ref }}"
@@ -297,19 +297,19 @@ jobs:
           fi
           echo ""
           echo "Hardware: Jetson Orin"
-          echo "Package: vllm"
-          echo "Stage 1 (Package Listing): ${{ steps.vllm-test.outputs.stage1 }}"
-          echo "Stage 2 (Package Build): ${{ steps.vllm-test.outputs.stage2 }}"
-          echo "Overall Status: ${{ steps.vllm-test.outputs.build_status }}"
+          echo "Package: cudnn"
+          echo "Stage 1 (Package Listing): ${{ steps.cudnn-test.outputs.stage1 }}"
+          echo "Stage 2 (Package Build): ${{ steps.cudnn-test.outputs.stage2 }}"
+          echo "Overall Status: ${{ steps.cudnn-test.outputs.build_status }}"
 
-          if [ "${{ steps.vllm-test.outputs.build_status }}" = "success" ]; then
-            echo "🎉 RESULT: vllm package SUCCESS on Jetson Orin"
+          if [ "${{ steps.cudnn-test.outputs.build_status }}" = "success" ]; then
+            echo "🎉 RESULT: cudnn package SUCCESS on Jetson Orin"
           else
-            echo "💥 RESULT: vllm package FAILED on Jetson Orin"
-            echo "Failure Phase: ${{ steps.vllm-test.outputs.failure_phase }}"
-            echo "Failure Stage: ${{ steps.vllm-test.outputs.failure_stage }}"
-            echo "Failure Component: ${{ steps.vllm-test.outputs.failure_component }}"
+            echo "💥 RESULT: cudnn package FAILED on Jetson Orin"
+            echo "Failure Phase: ${{ steps.cudnn-test.outputs.failure_phase }}"
+            echo "Failure Stage: ${{ steps.cudnn-test.outputs.failure_stage }}"
+            echo "Failure Component: ${{ steps.cudnn-test.outputs.failure_component }}"
             echo ""
-            echo "❌ vllm Package Test (Orin) - FAILED in STAGE: ${{ steps.vllm-test.outputs.failure_phase }} > ${{ steps.vllm-test.outputs.failure_stage }} > ${{ steps.vllm-test.outputs.failure_component }}"
+            echo "❌ cudnn Package Test (Orin) - FAILED in STAGE: ${{ steps.cudnn-test.outputs.failure_phase }} > ${{ steps.cudnn-test.outputs.failure_stage }} > ${{ steps.cudnn-test.outputs.failure_component }}"
             echo "Check build logs above for detailed failure information"
           fi
