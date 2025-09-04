@@ -1,4 +1,4 @@
-piper1-ttsname: (Orin) faster-whisper - PR validation (dev)
+name: (Orin) faster-whisper - PR validation (dev)
 
 on:
   pull_request:
