@@ -22,6 +22,19 @@ jobs:
     name: "nccl Package Test (Orin)"
 
     steps:
+      - name: Pre-checkout cleanup
+        run: |
+          echo "=== Pre-checkout Cleanup ==="
+          echo "Cleaning up any permission-restricted directories before checkout..."
+          sudo rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/data || echo "Data cleanup failed"
+          sudo rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/logs || echo "Logs cleanup failed"
+          sudo rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/.git || echo "Git cleanup failed"
+
+          # Reset permissions on work directory
+          sudo chown -R jetson:jetson /home/jetson/actions-runner/_work/jetson-containers/ || echo "Permission reset failed"
+
+          echo "Pre-checkout cleanup completed"
+
       - name: Checkout PR or Fork
         uses: actions/checkout@v4
         with:
