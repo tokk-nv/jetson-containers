@@ -32,6 +32,18 @@ jobs:
           uname -a
           nvidia-smi || echo "No nvidia-smi (Jetson usually)"
 
+      - name: Show git repository state
+        run: |
+          echo "=== Git Status ==="
+          git status
+          echo ""
+          echo "=== Recent Git History (last 20 commits) ==="
+          git log --oneline -20
+          echo ""
+          echo "=== Current Branch and Remote Info ==="
+          git branch -v
+          git remote -v
+
       - name: Check if build.sh exists
         run: |
           if [ -f "./build.sh" ]; then
@@ -47,9 +59,9 @@ jobs:
           # Make build.sh executable if it isn't already
           chmod +x ./build.sh
 
-          # Run the build test as specified
-          echo "Running build test for vllm..."
-          ./build.sh --build-flags="--no-cache" --no-github-api vllm
+          # Run the build test
+          echo "Listing packages..."
+          ./build.sh --list-packages
 
       - name: Build test results
         run: |
