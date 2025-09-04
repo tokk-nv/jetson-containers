@@ -1,4 +1,4 @@
-name: [Orin] comfyui - PR validation (dev)
+name: (Orin) comfyui - PR validation (dev)
 
 on:
   pull_request:

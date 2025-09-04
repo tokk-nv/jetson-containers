@@ -1,4 +1,4 @@
-name: [Orin] sglang - PR validation (dev)
+name: (Orin) sglang - PR validation (dev)
 
 on:
   pull_request:

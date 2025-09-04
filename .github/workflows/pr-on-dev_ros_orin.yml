@@ -1,4 +1,4 @@
-name: [Orin] ros - PR validation (dev)
+name: (Orin) ros - PR validation (dev)
 
 on:
   pull_request:

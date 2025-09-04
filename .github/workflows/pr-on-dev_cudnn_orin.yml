@@ -1,4 +1,4 @@
-name: [Orin] cudnn - PR validation (dev)
+name: (Orin) cudnn - PR validation (dev)
 
 on:
   pull_request:

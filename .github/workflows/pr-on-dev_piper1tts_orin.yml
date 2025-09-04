@@ -1,4 +1,4 @@
-name: [Orin] piper1-tts - PR validation (dev)
+name: (Orin) piper1-tts - PR validation (dev)
 
 on:
   pull_request:

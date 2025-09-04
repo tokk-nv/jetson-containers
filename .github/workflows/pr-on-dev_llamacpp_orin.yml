@@ -1,4 +1,4 @@
-name: [Orin] llamacpp - PR validation (dev)
+name: (Orin) llamacpp - PR validation (dev)
 
 on:
   pull_request:

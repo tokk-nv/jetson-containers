@@ -1,4 +1,4 @@
-name: [Orin] sound-utils - PR validation (dev)
+name: (Orin) sound-utils - PR validation (dev)
 
 on:
   pull_request:

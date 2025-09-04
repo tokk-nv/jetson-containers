@@ -1,4 +1,4 @@
-name: [Orin] mlc - PR validation (dev)
+name: (Orin) mlc - PR validation (dev)
 
 on:
   pull_request:

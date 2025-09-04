@@ -1,4 +1,4 @@
-name: [Orin] nccl - PR validation (dev)
+name: (Orin) nccl - PR validation (dev)
 
 on:
   pull_request:
