@@ -27,7 +27,7 @@ This directory contains reusable scripts for GitHub Actions workflows in the jet
 To create a new workflow for a package and platform:
 
 ```bash
-cd .github/scripts
+cd .github/workflows/scripts
 ./generate-workflow.sh vllm orin
 ./generate-workflow.sh vllm thor
 ```
@@ -39,7 +39,7 @@ This will create:
 ### Creating Multiple Workflows
 
 ```bash
-cd .github/scripts
+cd .github/workflows/scripts
 # For Orin platform
 ./generate-workflow.sh vllm orin
 ./generate-workflow.sh cudnn orin

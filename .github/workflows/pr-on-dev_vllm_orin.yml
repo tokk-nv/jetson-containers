@@ -37,16 +37,16 @@ jobs:
           echo "Contents of .github directory:"
           ls -la .github/ || echo "No .github directory found"
           echo ""
-          echo "Contents of .github/scripts directory:"
-          ls -la .github/scripts/ || echo "No .github/scripts directory found"
+          echo "Contents of .github/workflows directory:"
+          ls -la .github/workflows/ || echo "No .github/workflows directory found"
           echo ""
-          echo "Contents of scripts/gh-actions directory:"
-          ls -la scripts/gh-actions/ || echo "No scripts/gh-actions directory found"
+          echo "Contents of .github/workflows/scripts directory:"
+          ls -la .github/workflows/scripts/ || echo "No .github/workflows/scripts directory found"
           echo ""
           echo "PATH: $PATH"
 
       - name: Pre-checkout cleanup
-        run: bash scripts/gh-actions/pre-checkout-cleanup.sh
+        run: bash .github/workflows/scripts/pre-checkout-cleanup.sh
 
       - name: Checkout PR or Fork
         uses: actions/checkout@v4
@@ -58,24 +58,24 @@ jobs:
 
 
       - name: Display system info
-        run: bash scripts/gh-actions/system-info.sh
+        run: bash .github/workflows/scripts/system-info.sh
 
       - name: Record environment variables
-        run: bash scripts/gh-actions/env-info.sh
+        run: bash .github/workflows/scripts/env-info.sh
 
       - name: Clean environment for fresh build
-        run: bash scripts/gh-actions/clean-environment.sh
+        run: bash .github/workflows/scripts/clean-environment.sh
 
       - name: Show git repository state
-        run: bash scripts/gh-actions/git-status.sh
+        run: bash .github/workflows/scripts/git-status.sh
 
       - name: Test build vllm package on Orin
         id: package-test
-        run: bash scripts/gh-actions/build-package.sh vllm
+        run: bash .github/workflows/scripts/build-package.sh vllm
 
       - name: Analyze build results
         if: always()
-        run: bash scripts/gh-actions/analyze-results.sh vllm ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }}
+        run: bash .github/workflows/scripts/analyze-results.sh vllm ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }}
 
       - name: Test build results
-        run: bash scripts/gh-actions/test-results-summary.sh vllm ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }} ${{ steps.package-test.outputs.failure_phase }} ${{ steps.package-test.outputs.failure_stage }} ${{ steps.package-test.outputs.failure_component }}
+        run: bash .github/workflows/scripts/test-results-summary.sh vllm ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }} ${{ steps.package-test.outputs.failure_phase }} ${{ steps.package-test.outputs.failure_stage }} ${{ steps.package-test.outputs.failure_component }}
