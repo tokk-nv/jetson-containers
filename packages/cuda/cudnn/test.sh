@@ -7,7 +7,7 @@ CUDNN_SAMPLES=/usr/src/cudnn_samples_v*
 if [ -d $CUDNN_SAMPLES ]; then
 	cd $CUDNN_SAMPLES/conv_sample/
 	if [ ! -f conv_sample ]; then
-		echo "building cuDNN conv_sample"
+		echo "building cuDNN conv_sample (conv_sample did not get built in Dockerfile)"
 		make -j$(nproc)
 	fi
 	./conv_sample
