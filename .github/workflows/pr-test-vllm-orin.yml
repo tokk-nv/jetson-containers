@@ -28,9 +28,9 @@ jobs:
           echo "Cleaning up any permission-restricted directories before checkout..."
 
           # Try to clean up directories (may fail due to permissions)
+          # Don't remove .git directory - let checkout handle it
           rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/data || echo "Data cleanup failed (permission denied)"
           rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/logs || echo "Logs cleanup failed (permission denied)"
-          rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/.git || echo "Git cleanup failed (permission denied)"
 
           # Try to change permissions (may fail)
           chmod -R 755 /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/ 2>/dev/null || echo "Permission change failed"
