@@ -1,4 +1,4 @@
-name: (Orin) mlc - PR validation (dev)
+name: mlc (dev)
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ on:
 jobs:
   test-mlc-orin:
     runs-on: [self-hosted, linux, arm64, jetson, orin]
-    name: "mlc Package Test (Orin)"
+    name: "Package Build Test (Orin)"
 
     steps:
       - name: Pre-checkout cleanup

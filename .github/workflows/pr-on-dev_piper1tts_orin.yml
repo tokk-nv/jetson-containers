@@ -19,7 +19,7 @@ on:
 jobs:
   test-piper1-tts-orin:
     runs-on: [self-hosted, linux, arm64, jetson, orin]
-    name: "piper1-tts Package Test (Orin)"
+    name: "Package Build Test (Orin)"
 
     steps:
       - name: Pre-checkout cleanup

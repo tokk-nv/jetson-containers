@@ -1,4 +1,4 @@
-name: (Orin) nccl - PR validation (dev)
+name: nccl (dev)
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ on:
 jobs:
   test-nccl-orin:
     runs-on: [self-hosted, linux, arm64, jetson, orin]
-    name: "nccl Package Test (Orin)"
+    name: "Package Build Test (Orin)"
 
     steps:
       - name: Pre-checkout cleanup

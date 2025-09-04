@@ -1,4 +1,4 @@
-name: (Orin) nerfstudio - PR validation (dev)
+name: nerfstudio (dev)
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ on:
 jobs:
   test-nerfstudio-orin:
     runs-on: [self-hosted, linux, arm64, jetson, orin]
-    name: "nerfstudio Package Test (Orin)"
+    name: "Package Build Test (Orin)"
 
     steps:
       - name: Pre-checkout cleanup

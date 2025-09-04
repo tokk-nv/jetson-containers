@@ -19,7 +19,7 @@ on:
 jobs:
   test-faster-whisper-orin:
     runs-on: [self-hosted, linux, arm64, jetson, orin]
-    name: "faster-whisper Package Test (Orin)"
+    name: "Package Build Test (Orin)"
 
     steps:
       - name: Pre-checkout cleanup

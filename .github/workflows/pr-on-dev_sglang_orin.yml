@@ -1,4 +1,4 @@
-name: (Orin) sglang - PR validation (dev)
+name: sglang (dev)
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ on:
 jobs:
   test-sglang-orin:
     runs-on: [self-hosted, linux, arm64, jetson, orin]
-    name: "sglang Package Test (Orin)"
+    name: "Package Build Test (Orin)"
 
     steps:
       - name: Pre-checkout cleanup

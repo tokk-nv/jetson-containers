@@ -1,4 +1,4 @@
-name: (Orin) comfyui - PR validation (dev)
+name: comfyui (dev)
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ on:
 jobs:
   test-comfyui-orin:
     runs-on: [self-hosted, linux, arm64, jetson, orin]
-    name: "comfyui Package Test (Orin)"
+    name: "Package Build Test (Orin)"
 
     steps:
       - name: Pre-checkout cleanup

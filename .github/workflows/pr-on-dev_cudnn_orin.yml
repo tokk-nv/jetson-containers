@@ -1,4 +1,4 @@
-name: (Orin) cudnn - PR validation (dev)
+name: cudnn (dev)
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ on:
 jobs:
   test-cudnn-orin:
     runs-on: [self-hosted, linux, arm64, jetson, orin]
-    name: "cudnn Package Build Test (Orin)"
+    name: "Package Build Test (Orin)"
 
     steps:
       - name: Pre-checkout cleanup

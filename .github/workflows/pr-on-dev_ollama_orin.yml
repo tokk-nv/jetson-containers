@@ -1,4 +1,4 @@
-name: (Orin) ollama - PR validation (dev)
+name: ollama (dev)
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ on:
 jobs:
   test-ollama-orin:
     runs-on: [self-hosted, linux, arm64, jetson, orin]
-    name: "ollama Package Test (Orin)"
+    name: "Package Build Test (Orin)"
 
     steps:
       - name: Pre-checkout cleanup

@@ -1,4 +1,4 @@
-name: (Orin) llamacpp - PR validation (dev)
+name: llamacpp (dev)
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ on:
 jobs:
   test-llamacpp-orin:
     runs-on: [self-hosted, linux, arm64, jetson, orin]
-    name: "llamacpp Package Test (Orin)"
+    name: "Package Build Test (Orin)"
 
     steps:
       - name: Pre-checkout cleanup

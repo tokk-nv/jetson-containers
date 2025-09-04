@@ -19,7 +19,7 @@ on:
 jobs:
   test-sound-utils-orin:
     runs-on: [self-hosted, linux, arm64, jetson, orin]
-    name: "sound-utils Package Test (Orin)"
+    name: "Package Build Test (Orin)"
 
     steps:
       - name: Pre-checkout cleanup
