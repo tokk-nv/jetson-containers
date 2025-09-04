@@ -98,11 +98,11 @@ jobs:
 
           # Clean up any permission-restricted directories
           echo "Cleaning up permission-restricted directories..."
-          sudo rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/data || echo "Data cleanup failed"
-          sudo rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/logs || echo "Logs cleanup failed"
+          rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/data || echo "Data cleanup failed"
+          rm -rf /home/jetson/actions-runner/_work/jetson-containers/jetson-containers/logs || echo "Logs cleanup failed"
 
           # Reset permissions on work directory
-          sudo chown -R jetson:jetson /home/jetson/actions-runner/_work/jetson-containers/ || echo "Permission reset failed"
+          chown -R jetson:jetson /home/jetson/actions-runner/_work/jetson-containers/ || echo "Permission reset failed"
 
           echo "Environment cleaned for fresh build"
 
