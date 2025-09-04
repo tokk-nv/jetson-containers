@@ -28,8 +28,8 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
           # For manual runs with fork inputs, checkout the specified fork
-          ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && format('repository: {0}', inputs.fork_repo) || '' }}
-          ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && format('ref: {0}', inputs.fork_branch) || '' }}
+          repository: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && inputs.fork_repo || github.repository }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}
 
       - name: Get PR or Manual Run information
         id: pr-info
@@ -89,6 +89,12 @@ jobs:
       - name: Build test results
         run: |
           echo "Build test completed successfully!"
-          echo "PR from: ${{ github.event.pull_request.head.repo.full_name }}"
-          echo "Branch: ${{ github.head_ref }}"
-          echo "Commit: ${{ github.event.pull_request.head.sha }}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "PR from: ${{ github.event.pull_request.head.repo.full_name }}"
+            echo "Branch: ${{ github.head_ref }}"
+            echo "Commit: ${{ github.event.pull_request.head.sha }}"
+          else
+            echo "Manual run from: ${{ github.repository }}"
+            echo "Branch: ${{ github.ref_name }}"
+            echo "Commit: ${{ github.sha }}"
+          fi
