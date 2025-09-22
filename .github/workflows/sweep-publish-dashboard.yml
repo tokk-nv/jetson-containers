@@ -726,11 +726,11 @@ jobs:
                           if (runId === 'current') {{
                               response = await fetch('results.json');
                           }} else {{
-                              response = await fetch(`runs/results-${{runId}}.json`);
+                              response = await fetch(`runs/results-${runId}.json`);
                           }}
 
                           if (!response.ok) {{
-                              throw new Error(`Failed to load results for run ${{runId}}`);
+                              throw new Error(`Failed to load results for run ${runId}`);
                           }}
 
                           allResults = await response.json();
