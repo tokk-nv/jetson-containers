@@ -1127,7 +1127,7 @@ jobs:
             );
 
             const dashboardUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/dashboard.html`;
-            const reportUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const reportUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.run_id}`;
 
             const commentBody = `## 🚀 Jetson Containers Build Dashboard
 
