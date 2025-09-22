@@ -1052,3 +1052,12 @@ jobs:
           path: results.json
           overwrite: true
           retention-days: 30
+
+      - name: Trigger dashboard workflow
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // The dashboard workflow will be triggered automatically via workflow_run
+            // when this workflow completes (success or failure)
+            console.log('Sweep workflow completed. Dashboard workflow will be triggered automatically.');
