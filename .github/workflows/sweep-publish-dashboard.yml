@@ -29,6 +29,8 @@ jobs:
           name: sweep-results-${{ github.event.workflow_run.head_sha }}-${{ github.event.workflow_run.run_attempt }}
           path: ./results-data
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
 
       - name: Download recent sweep results (last 10 runs)
         run: |
