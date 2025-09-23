@@ -10,6 +10,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  actions: read
 
 jobs:
   publish-dashboard:
@@ -36,22 +37,23 @@ jobs:
           repo = os.environ.get('GITHUB_REPOSITORY')
           run_id = '${{ github.event.workflow_run.id }}'
           artifact_name = 'sweep-results-${{ github.event.workflow_run.head_sha }}-${{ github.event.workflow_run.run_attempt }}'
-          
+
           headers = {'Authorization': f'token {token}'}
-          
+
           print(f"Looking for artifact '{artifact_name}' in run {run_id}")
-          
+
           # Get artifacts for the triggering workflow run
           artifacts_url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/artifacts'
           response = requests.get(artifacts_url, headers=headers)
-          
+
           if response.status_code != 200:
               print(f"Failed to get artifacts: {response.status_code} - {response.text}")
               exit(1)
-          
+
           artifacts = response.json().get('artifacts', [])
           print(f"Found {len(artifacts)} artifacts in run {run_id}")
-          
+
+
           # Find the sweep results artifact
           target_artifact = None
           for artifact in artifacts:
@@ -59,6 +61,7 @@ jobs:
               if artifact['name'] == artifact_name:
                   target_artifact = artifact
                   break
+
           
           if not target_artifact:
               print(f"❌ Artifact '{artifact_name}' not found")
@@ -66,34 +69,35 @@ jobs:
               for artifact in artifacts:
                   print(f"  - {artifact['name']}")
               exit(1)
-          
+
           print(f"✅ Found target artifact: {target_artifact['name']}")
-          
+
           # Download the artifact
           download_url = f"https://api.github.com/repos/{repo}/actions/artifacts/{target_artifact['id']}/zip"
           download_response = requests.get(download_url, headers=headers)
-          
+
           if download_response.status_code != 200:
               print(f"❌ Failed to download artifact: {download_response.status_code}")
               exit(1)
-          
+
           # Create results-data directory
           os.makedirs('./results-data', exist_ok=True)
-          
+
+
           # Save and extract the artifact
           artifact_path = './current-results.zip'
           with open(artifact_path, 'wb') as f:
               f.write(download_response.content)
-          
+
           # Extract the artifact
           with zipfile.ZipFile(artifact_path, 'r') as zip_ref:
               zip_ref.extractall('./results-data')
-          
+
           # Clean up zip file
           os.remove(artifact_path)
-          
+
           print("✅ Successfully downloaded and extracted current sweep results")
-          
+
           # Verify results.json exists
           if os.path.exists('./results-data/results.json'):
               print("✅ results.json found")
