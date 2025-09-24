@@ -321,7 +321,7 @@ def get_cuda_arch(l4t_version: str = None, cuda_version: str = None, format=list
         # Nano/TX1 = 5.3, TX2 = 6.2, Xavier = 7.2, Orin = 8.7, Thor = 11.0
         if IS_TEGRA:
             if l4t_version.major >= 38:  # JetPack 7
-                cuda_architectures = [87, 110, 121]  # Thor 110, Spark
+                cuda_architectures = [87, 110, 120]  # Thor 110, Spark
             elif l4t_version.major >= 36:  # JetPack 6
                 cuda_architectures = [87]  # Ampere Orin, Hopper GH200 90
             elif l4t_version.major >= 34:  # JetPack 5
@@ -329,14 +329,9 @@ def get_cuda_arch(l4t_version: str = None, cuda_version: str = None, format=list
             elif l4t_version.major == 32:  # JetPack 4
                 cuda_architectures = [53, 62, 72]
         elif IS_SBSA:
-            cuda_architectures = [87, 90, 100, 103, 110, 120, 121]  # B300, Thor 110, Spark 121
+            cuda_architectures = [90, 100, 110, 120]  # Orin, Hopper, Blackwell, Thor 110, RTX/Spark
     else:
-        cuda_architectures = [
-            80, 86,  # Ampere
-            89,  # Ada
-            90,  # Hopper
-            100, 103, 110, 120, 121  # Blackwell
-        ]
+        cuda_architectures = [80, 90, 100, 120 ]
 
         if cuda_version >= Version('13.0'):
             cuda_architectures += [103, 110, 121]

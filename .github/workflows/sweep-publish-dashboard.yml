@@ -1,4 +1,4 @@
-name: Sweep Publish Dashboard
+name: Sweep - Publish Dashboard
 
 on:
   workflow_run:
@@ -11,6 +11,7 @@ permissions:
   pages: write
   id-token: write
   actions: read
+  deployments: write
 
 jobs:
   publish-dashboard:
@@ -24,169 +25,383 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download current sweep results
+      - name: Download current sweep results and logs
+        env:
+          DASHBOARD_PAT: ${{ secrets.DASHBOARD_PAT }}
         run: |
           python3 - << 'EOF'
           import requests
           import json
           import os
           import zipfile
+          import shutil
 
-          # GitHub API token and repo info
-          token = os.environ.get('GITHUB_TOKEN')
+          # Get current run info
+          dashboard_pat = os.environ.get('DASHBOARD_PAT')
+          github_token = os.environ.get('GITHUB_TOKEN')
+          token = dashboard_pat or github_token
           repo = os.environ.get('GITHUB_REPOSITORY')
-          run_id = '${{ github.event.workflow_run.id }}'
-          artifact_name = 'sweep-results-${{ github.event.workflow_run.head_sha }}-${{ github.event.workflow_run.run_attempt }}'
+          current_run_id = "${{ github.event.workflow_run.id }}"
+          current_sha = "${{ github.event.workflow_run.head_sha }}"
+          current_attempt = "${{ github.event.workflow_run.run_attempt }}"
+
+          print(f"🔍 Token debugging for current run download:")
+          print(f"   DASHBOARD_PAT exists: {dashboard_pat is not None}")
+          print(f"   GITHUB_TOKEN exists: {github_token is not None}")
+          print(f"   Using token: {'DASHBOARD_PAT' if dashboard_pat else 'GITHUB_TOKEN'}")
 
           headers = {'Authorization': f'token {token}'}
 
-          print(f"Looking for artifact '{artifact_name}' in run {run_id}")
+          print(f"🔍 Downloading artifacts from current run {current_run_id}")
+          print(f"   SHA: {current_sha}, Attempt: {current_attempt}")
 
-          # Get artifacts for the triggering workflow run
-          artifacts_url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/artifacts'
+          # Get all artifacts from current run
+          artifacts_url = f'https://api.github.com/repos/{repo}/actions/runs/{current_run_id}/artifacts'
           response = requests.get(artifacts_url, headers=headers)
 
           if response.status_code != 200:
-              print(f"Failed to get artifacts: {response.status_code} - {response.text}")
+              print(f"❌ Failed to get artifacts: {response.status_code}")
               exit(1)
 
           artifacts = response.json().get('artifacts', [])
-          print(f"Found {len(artifacts)} artifacts in run {run_id}")
+          print(f"📋 Found {len(artifacts)} total artifacts for current run:")
 
-
-          # Find the sweep results artifact
-          target_artifact = None
-          for artifact in artifacts:
-              print(f"  - {artifact['name']}")
-              if artifact['name'] == artifact_name:
-                  target_artifact = artifact
-                  break
-
-          
-          if not target_artifact:
-              print(f"❌ Artifact '{artifact_name}' not found")
-              print("Available artifacts:")
-              for artifact in artifacts:
-                  print(f"  - {artifact['name']}")
-              exit(1)
-
-          print(f"✅ Found target artifact: {target_artifact['name']}")
-
-          # Download the artifact
-          download_url = f"https://api.github.com/repos/{repo}/actions/artifacts/{target_artifact['id']}/zip"
-          download_response = requests.get(download_url, headers=headers)
-
-          if download_response.status_code != 200:
-              print(f"❌ Failed to download artifact: {download_response.status_code}")
-              exit(1)
-
-          # Create results-data directory
+          # Create directories
           os.makedirs('./results-data', exist_ok=True)
+          os.makedirs('./logs/run-current', exist_ok=True)
 
+          merged_results = []
 
-          # Save and extract the artifact
-          artifact_path = './current-results.zip'
-          with open(artifact_path, 'wb') as f:
-              f.write(download_response.content)
+          for artifact in artifacts:
+              print(f"  - {artifact['name']} ({artifact['size_in_bytes']} bytes)")
 
-          # Extract the artifact
-          with zipfile.ZipFile(artifact_path, 'r') as zip_ref:
-              zip_ref.extractall('./results-data')
+              # Download final merged results
+              if artifact['name'] == f"sweep-results-{current_sha}-{current_attempt}":
+                  print(f"    📥 Downloading merged results...")
+                  download_url = f"https://api.github.com/repos/{repo}/actions/artifacts/{artifact['id']}/zip"
+                  download_response = requests.get(download_url, headers=headers)
 
-          # Clean up zip file
-          os.remove(artifact_path)
+                  if download_response.status_code == 200:
+                      with open('./results-data/results.zip', 'wb') as f:
+                          f.write(download_response.content)
 
-          print("✅ Successfully downloaded and extracted current sweep results")
+                      with zipfile.ZipFile('./results-data/results.zip', 'r') as zip_ref:
+                          zip_ref.extractall('./results-data')
 
-          # Verify results.json exists
+                      os.remove('./results-data/results.zip')
+                      print(f"    ✅ Merged results downloaded")
+                  else:
+                      print(f"    ❌ Failed to download merged results: {download_response.status_code}")
+
+              # Download chunk artifacts (contain logs)
+              elif artifact['name'].startswith('results-') and '-chunk-' in artifact['name'] and artifact['name'].endswith(f'-{current_attempt}'):
+                  print(f"    📥 Downloading chunk artifact with logs...")
+                  download_url = f"https://api.github.com/repos/{repo}/actions/artifacts/{artifact['id']}/zip"
+                  download_response = requests.get(download_url, headers=headers)
+
+                  if download_response.status_code == 200:
+                      # Extract platform info from artifact name
+                      # Format: results-{platform}-chunk-{index}-{attempt}
+                      parts = artifact['name'].split('-')
+                      platform = parts[1] if len(parts) > 1 else 'unknown'
+                      chunk_index = parts[3] if len(parts) > 3 else '000'
+
+                      artifact_path = f'./temp-{artifact["id"]}.zip'
+                      with open(artifact_path, 'wb') as f:
+                          f.write(download_response.content)
+
+                      with zipfile.ZipFile(artifact_path, 'r') as zip_ref:
+                          zip_ref.extractall(f'./temp-{artifact["id"]}')
+
+                      # Move log files with unique names
+                      temp_dir = f'./temp-{artifact["id"]}'
+                      for root, dirs, files in os.walk(temp_dir):
+                          for file in files:
+                              if file.endswith('.log'):
+                                  src = os.path.join(root, file)
+                                  # Create unique filename with platform
+                                  base_name, ext = os.path.splitext(file)
+                                  unique_name = f"{base_name}_{platform}{ext}"
+                                  dst = os.path.join('./logs/run-current', unique_name)
+                                  print(f"    📝 Moving log: {file} -> {unique_name}")
+                                  shutil.move(src, dst)
+
+                      # Clean up
+                      os.remove(artifact_path)
+                      shutil.rmtree(temp_dir)
+                      print(f"    ✅ Chunk logs processed for {platform}")
+                  else:
+                      print(f"    ❌ Failed to download chunk: {download_response.status_code}")
+
+          print(f"✅ Current run artifact download complete")
+
+          # List what we got
+          print(f"\n📁 Downloaded files:")
           if os.path.exists('./results-data/results.json'):
-              print("✅ results.json found")
+              print(f"  ✅ ./results-data/results.json")
           else:
-              print("❌ results.json not found in extracted artifact")
-              print("Contents of results-data:")
-              for item in os.listdir('./results-data'):
-                  print(f"  - {item}")
+              print(f"  ❌ ./results-data/results.json missing")
+
+          if os.path.exists('./logs/run-current'):
+              log_files = os.listdir('./logs/run-current')
+              print(f"  📝 Log files ({len(log_files)}):")
+              for log_file in log_files:
+                  print(f"    - {log_file}")
+          else:
+              print(f"  ❌ No log files found")
           EOF
 
-      - name: Download recent sweep results (last 10 runs)
+      - name: Download recent sweep results (with PAT support)
+        env:
+          DASHBOARD_PAT: ${{ secrets.DASHBOARD_PAT }}
         run: |
+          echo "🔍 Testing cross-repository access for historical runs..."
+          echo "   Current repository: $GITHUB_REPOSITORY"
+          echo "   Triggered by: $GITHUB_EVENT_NAME"
+          echo ""
+
+          # Test secret access first
+          if [ -n "$DASHBOARD_PAT" ]; then
+            echo "✅ DASHBOARD_PAT is accessible (length: ${#DASHBOARD_PAT})"
+          else
+            echo "❌ DASHBOARD_PAT is not accessible"
+          fi
+          echo ""
+
           python3 - << 'EOF'
           import requests
           import json
           import os
-          from datetime import datetime, timedelta
 
-          # GitHub API token
-          token = os.environ.get('GITHUB_TOKEN')
-          repo = os.environ.get('GITHUB_REPOSITORY')
+          # Try to use PAT first (for API access), fallback to GITHUB_TOKEN
+          dashboard_pat = os.environ.get('DASHBOARD_PAT')
+          github_token = os.environ.get('GITHUB_TOKEN')
+          token = dashboard_pat or github_token
+          current_repo = os.environ.get('GITHUB_REPOSITORY')
+
+          print(f"🔍 Token debugging:")
+          print(f"   DASHBOARD_PAT exists: {dashboard_pat is not None}")
+          print(f"   GITHUB_TOKEN exists: {github_token is not None}")
+          print(f"   Using token: {'DASHBOARD_PAT' if dashboard_pat else 'GITHUB_TOKEN'}")
+          print(f"   Token length: {len(token) if token else 0}")
+          print(f"   Token prefix: {token[:10]}..." if token else "No token")
+          print(f"   Repository: {current_repo}")
+          print(f"   Event: {os.environ.get('GITHUB_EVENT_NAME')}")
+          print(f"   Actor: {os.environ.get('GITHUB_ACTOR')}")
+          print()
+
           headers = {'Authorization': f'token {token}'}
 
-          # Get recent workflow runs
-          url = f'https://api.github.com/repos/{repo}/actions/workflows/sweep-build-matrix.yml/runs'
-          params = {'per_page': 10, 'status': 'completed'}
+          # Focus on upstream since that's where workflows run
+          possible_repos = [
+              current_repo,  # Should be NVIDIA-AI-IOT/jetson-containers
+          ]
 
-          response = requests.get(url, headers=headers, params=params)
-          runs = response.json().get('workflow_runs', [])
+          print(f"🔍 Will test access to repositories:")
+          for repo in possible_repos:
+              print(f"   - {repo}")
+          print()
 
-          print(f"Found {len(runs)} recent workflow runs")
+          runs = []
+          successful_repo = None
 
-          # Create directories for different runs
-          os.makedirs('./runs', exist_ok=True)
+          for repo in possible_repos:
+              print(f"🔄 Testing repository: {repo}")
 
-          for i, run in enumerate(runs):
-              run_id = run['id']
-              sha = run['head_sha']
-              created_at = run['created_at']
+              # First, test basic repo access
+              repo_url = f'https://api.github.com/repos/{repo}'
+              repo_response = requests.get(repo_url, headers=headers)
+              print(f"   Basic repo access: {repo_response.status_code}")
 
-              print(f"Processing run {i+1}: {run_id} (SHA: {sha[:8]})")
+              # Then test workflow file access
+              workflow_url = f'https://api.github.com/repos/{repo}/actions/workflows/sweep-build-matrix.yml'
+              workflow_response = requests.get(workflow_url, headers=headers)
+              print(f"   Workflow file access: {workflow_response.status_code}")
 
-              # Get artifacts for this run
-              artifacts_url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/artifacts'
-              artifacts_response = requests.get(artifacts_url, headers=headers)
-              artifacts = artifacts_response.json().get('artifacts', [])
+              # Finally test workflow runs
+              url = f'https://api.github.com/repos/{repo}/actions/workflows/sweep-build-matrix.yml/runs'
+              params = {'per_page': 15}  # Fetch more runs for better historical timeline
 
-              # Find sweep results artifact
-              sweep_artifact = None
-              for artifact in artifacts:
-                  if artifact['name'].startswith('sweep-results-'):
-                      sweep_artifact = artifact
-                      break
+              print(f"   Testing workflow runs API...")
+              print(f"   URL: {url}")
+              print(f"   Params: {params}")
 
-              if sweep_artifact:
-                  print(f"  Found sweep results artifact: {sweep_artifact['name']}")
+              response = requests.get(url, headers=headers, params=params)
+              print(f"   Workflow runs status: {response.status_code}")
 
-                  # Download artifact
-                  download_url = f"https://api.github.com/repos/{repo}/actions/artifacts/{sweep_artifact['id']}/zip"
-                  download_response = requests.get(download_url, headers=headers)
+              if response.status_code == 200:
+                  repo_runs = response.json().get('workflow_runs', [])
+                  print(f"   ✅ Success! Found {len(repo_runs)} total workflow runs")
 
-                  if download_response.status_code == 200:
-                      # Save artifact zip
-                      artifact_path = f'./runs/run-{run_id}.zip'
-                      with open(artifact_path, 'wb') as f:
-                          f.write(download_response.content)
+                  if len(repo_runs) > 0:
+                      # Show run details
+                      print(f"   📊 Recent runs:")
+                      for i, run in enumerate(repo_runs[:5]):
+                          print(f"      {i+1}. ID: {run['id']}, Status: {run['status']}, Branch: {run['head_branch']}")
 
-                      # Extract zip
-                      import zipfile
-                      with zipfile.ZipFile(artifact_path, 'r') as zip_ref:
-                          zip_ref.extractall(f'./runs/run-{run_id}')
+                      # Filter for completed runs
+                      completed_runs = [r for r in repo_runs if r['status'] in ['completed', 'success', 'failure']]
+                      print(f"   🎯 Completed runs: {len(completed_runs)}")
 
-                      # Move results.json to a standardized location
-                      results_src = f'./runs/run-{run_id}/results.json'
-                      if os.path.exists(results_src):
-                          results_dst = f'./runs/results-{run_id}.json'
-                          os.rename(results_src, results_dst)
-                          print(f"  ✅ Saved results-{run_id}.json")
-                      else:
-                          print(f"  ❌ No results.json found in artifact")
-
-                      # Clean up zip file
-                      os.remove(artifact_path)
+                      if completed_runs:
+                          runs = completed_runs[:10]  # Process up to 10 recent runs
+                          successful_repo = repo
+                          break
                   else:
-                      print(f"  ❌ Failed to download artifact: {download_response.status_code}")
+                      print(f"   ⚠️  No workflow runs found at all")
               else:
-                  print(f"  ❌ No sweep results artifact found")
+                  print(f"   ❌ Error: {response.status_code}")
+                  try:
+                      error_detail = response.json()
+                      print(f"   Error details: {error_detail}")
+                  except:
+                      print(f"   Error text: {response.text[:200]}")
 
-          print("Completed downloading recent runs")
+          if successful_repo:
+              print(f"\n🎯 Found workflow runs in: {successful_repo}")
+              print(f"📊 Will process {len(runs)} recent runs for timeline")
+
+              # Create runs directory and process a few runs
+              os.makedirs('./runs', exist_ok=True)
+
+              for i, run in enumerate(runs):
+                  run_id = run['id']
+                  sha = run['head_sha']
+                  run_attempt = run['run_attempt']
+                  print(f"   Processing run {i+1}: {run_id} (SHA: {sha[:8]})")
+
+                  # Download the sweep results artifact for this run
+                  artifacts_url = f'https://api.github.com/repos/{current_repo}/actions/runs/{run_id}/artifacts'
+                  artifacts_response = requests.get(artifacts_url, headers=headers)
+
+                  if artifacts_response.status_code == 200:
+                      artifacts = artifacts_response.json().get('artifacts', [])
+
+                      # Find the sweep results artifact
+                      sweep_artifact = None
+                      for artifact in artifacts:
+                          if artifact['name'].startswith(f'sweep-results-{sha}'):
+                              sweep_artifact = artifact
+                              break
+
+                      if sweep_artifact:
+                          print(f"     Found artifact: {sweep_artifact['name']}")
+
+                          # Download the artifact
+                          download_url = f"https://api.github.com/repos/{current_repo}/actions/artifacts/{sweep_artifact['id']}/zip"
+                          download_response = requests.get(download_url, headers=headers)
+
+                          if download_response.status_code == 200:
+                              # Save and extract the artifact
+                              import zipfile
+                              artifact_path = f'./temp-{run_id}.zip'
+                              with open(artifact_path, 'wb') as f:
+                                  f.write(download_response.content)
+
+                              # Extract and move results.json
+                              with zipfile.ZipFile(artifact_path, 'r') as zip_ref:
+                                  zip_ref.extractall(f'./temp-{run_id}')
+
+                              # Find and move the results.json file
+                              import shutil
+                              temp_results = f'./temp-{run_id}/results.json'
+                              if os.path.exists(temp_results):
+                                  final_path = f'./runs/results-{run_id}.json'
+                                  shutil.move(temp_results, final_path)
+                                  print(f"     ✅ Saved results-{run_id}.json")
+                              else:
+                                  print(f"     ❌ No results.json found in artifact")
+
+                              # Clean up
+                              os.remove(artifact_path)
+                              shutil.rmtree(f'./temp-{run_id}')
+
+                              # Now download log artifacts for this run
+                              print(f"     🔍 Looking for log artifacts...")
+                              print(f"     📋 All available artifacts for run {run_id}:")
+                              for art in artifacts:
+                                  print(f"       - {art['name']} (size: {art.get('size_in_bytes', 'unknown')})")
+
+                              log_artifacts = [a for a in artifacts if 'chunk-' in a['name'] and a['name'].startswith('results-')]
+
+                              if log_artifacts:
+                                  print(f"     📋 Found {len(log_artifacts)} log artifacts")
+                                  run_logs_dir = f'./logs/run-{run_id}'
+                                  os.makedirs(run_logs_dir, exist_ok=True)
+
+                                  for log_artifact in log_artifacts[:5]:  # Limit to first 5 to avoid timeout
+                                      print(f"       Downloading {log_artifact['name']}")
+                                      log_download_url = f"https://api.github.com/repos/{current_repo}/actions/artifacts/{log_artifact['id']}/zip"
+                                      log_download_response = requests.get(log_download_url, headers=headers)
+
+                                      if log_download_response.status_code == 200:
+                                          log_artifact_path = f'./temp-log-{log_artifact["id"]}.zip'
+                                          with open(log_artifact_path, 'wb') as f:
+                                              f.write(log_download_response.content)
+
+                                          # Extract log files
+                                          with zipfile.ZipFile(log_artifact_path, 'r') as zip_ref:
+                                              zip_ref.extractall(f'./temp-log-{log_artifact["id"]}')
+
+                                          # Move log files to run directory
+                                          temp_log_dir = f'./temp-log-{log_artifact["id"]}'
+                                          print(f"       📂 Extracting from: {temp_log_dir}")
+                                          for root, dirs, files in os.walk(temp_log_dir):
+                                              print(f"         📁 Directory: {root}")
+                                              print(f"         📄 Files: {files}")
+                                              for file in files:
+                                                  if file.endswith('.log'):
+                                                      src = os.path.join(root, file)
+                                                      dst = os.path.join(run_logs_dir, file)
+                                                      print(f"         📝 Moving log: {src} → {dst}")
+                                                      shutil.move(src, dst)
+                                                  else:
+                                                      print(f"         ⚠️  Skipping non-log file: {file}")
+
+                                          # Clean up log temp files
+                                          os.remove(log_artifact_path)
+                                          shutil.rmtree(temp_log_dir)
+                                      else:
+                                          print(f"       ❌ Failed to download log: {log_download_response.status_code}")
+
+                                  # Count log files downloaded and list them
+                                  log_files = [f for f in os.listdir(run_logs_dir) if f.endswith('.log')]
+                                  log_count = len(log_files)
+                                  print(f"     ✅ Downloaded {log_count} log files for run {run_id}")
+                                  print(f"     📋 Log files created:")
+                                  for log_file in log_files:
+                                      full_path = os.path.join(run_logs_dir, log_file)
+                                      file_size = os.path.getsize(full_path)
+                                      print(f"       - {log_file} ({file_size} bytes)")
+                              else:
+                                  print(f"     ⚠️  No log artifacts found for run {run_id}")
+                          else:
+                              print(f"     ❌ Failed to download artifact: {download_response.status_code}")
+                      else:
+                          print(f"     ❌ No sweep results artifact found")
+                  else:
+                      print(f"     ❌ Failed to get artifacts: {artifacts_response.status_code}")
+
+          else:
+              if dashboard_pat:
+                  print(f"\n❌ No accessible repository found even with DASHBOARD_PAT")
+                  print(f"   Please check:")
+                  print(f"   1. PAT has 'actions:read' scope")
+                  print(f"   2. PAT has access to {current_repo}")
+                  print(f"   3. Workflow runs exist in the repository")
+              else:
+                  print(f"\n❌ No accessible repository found with GITHUB_TOKEN")
+                  print(f"   Root cause: workflow_run trigger has limited API permissions")
+                  print()
+                  print(f"🔧 To enable historical runs timeline:")
+                  print(f"   1. Create Personal Access Token with 'actions:read' scope")
+                  print(f"   2. Add as repository secret named 'DASHBOARD_PAT'")
+                  print(f"   3. Re-run workflow to access historical data")
+                  print(f"   4. Timeline will show last 10 workflow runs with full details")
+
+              os.makedirs('./runs', exist_ok=True)
+
+          print(f"\nCompleted repository access test")
           EOF
 
       - name: Check if results.json exists
@@ -231,8 +446,25 @@ jobs:
                       artifacts_response = requests.get(artifacts_url, headers=headers)
                       artifacts = artifacts_response.json().get('artifacts', [])
 
+                      # Debug: List ALL artifacts for this run
+                      print(f"  📋 Available artifacts for run {run_id}:")
+                      for artifact in artifacts:
+                          print(f"    - Name: {artifact['name']}, Size: {artifact['size_in_bytes']} bytes")
+
+                      if not artifacts:
+                          print(f"    ❌ No artifacts found at all for run {run_id}")
+                          continue
+
                       # Find chunk results artifacts (these contain the logs)
                       chunk_artifacts = [a for a in artifacts if a['name'].startswith('results-') and 'chunk-' in a['name']]
+
+                      # If no chunk artifacts, try broader search for log-containing artifacts
+                      if not chunk_artifacts:
+                          # Look for any artifact that might contain logs
+                          log_artifacts = [a for a in artifacts if 'results-' in a['name'] or 'logs-' in a['name'] or 'chunk' in a['name'].lower()]
+                          print(f"  🔍 No 'chunk-' artifacts found, trying broader search...")
+                          print(f"  📦 Potential log artifacts: {[a['name'] for a in log_artifacts]}")
+                          chunk_artifacts = log_artifacts
 
                       if chunk_artifacts:
                           print(f"  Found {len(chunk_artifacts)} chunk artifacts")
@@ -257,13 +489,34 @@ jobs:
                                   with zipfile.ZipFile(artifact_path, 'r') as zip_ref:
                                       zip_ref.extractall(f'./temp-{artifact["id"]}')
 
-                                  # Copy log files to run logs directory
+                                  # Copy log files to run logs directory with unique names
                                   temp_dir = f'./temp-{artifact["id"]}'
+                                  artifact_name = artifact['name']
+                                  print(f"    Processing artifact: {artifact_name}")
+
                                   for root, dirs, files in os.walk(temp_dir):
                                       for file in files:
                                           if file.endswith('.log') or file.startswith('index_'):
                                               src = os.path.join(root, file)
-                                              dst = os.path.join(run_logs_dir, file)
+
+                                              # Make filename unique by including artifact info
+                                              # Extract runner info from artifact name (e.g., results-build-essential-orin-chunk-001)
+                                              base_name, ext = os.path.splitext(file)
+                                              if 'orin' in artifact_name.lower():
+                                                  unique_file = f"{base_name}_orin{ext}"
+                                              elif 'thor' in artifact_name.lower():
+                                                  unique_file = f"{base_name}_thor{ext}"
+                                              else:
+                                                  # Fallback: use part of artifact name
+                                                  parts = artifact_name.split('-')
+                                                  if len(parts) > 3:
+                                                      runner_hint = parts[3] if parts[3] not in ['chunk'] else parts[2]
+                                                      unique_file = f"{base_name}_{runner_hint}{ext}"
+                                                  else:
+                                                      unique_file = file
+
+                                              dst = os.path.join(run_logs_dir, unique_file)
+                                              print(f"    Moving log file: {src} -> {dst} (from artifact: {artifact_name})")
                                               os.makedirs(os.path.dirname(dst), exist_ok=True)
                                               os.rename(src, dst)
 
@@ -300,9 +553,12 @@ jobs:
           # Load available runs
           available_runs = []
           runs_dir = './runs'
+          print(f"Looking for historical runs in: {runs_dir}")
           if os.path.exists(runs_dir):
-              for filename in os.listdir(runs_dir):
-                  if filename.startswith('results-') and filename.endswith('.json'):
+              files = os.listdir(runs_dir)
+              results_files = [f for f in files if f.startswith('results-') and f.endswith('.json')]
+              print(f"Found {len(files)} total files, {len(results_files)} results files: {results_files}")
+              for filename in results_files:
                       run_id = filename.replace('results-', '').replace('.json', '')
                       try:
                           with open(os.path.join(runs_dir, filename), 'r') as f:
@@ -324,7 +580,20 @@ jobs:
           # Sort runs by timestamp (newest first)
           available_runs.sort(key=lambda x: x['timestamp'], reverse=True)
 
-          print(f"Found {len(available_runs)} available runs")
+          print(f"✅ Found {len(available_runs)} available runs for timeline")
+          if len(available_runs) == 0:
+              print("❌ No historical runs available - timeline will only show current run")
+              print("This is normal for the first few runs until we build up history")
+          else:
+              print(f"📊 Timeline will show: {[r['run_id'] for r in available_runs[:5]]}...")
+          print(f"🎯 Total runs that will appear in dashboard: {len(available_runs) + 1}")  # +1 for current
+
+          # Debug: Show log_relpath values from current results
+          print(f"🔍 Debug: Current results log_relpath values:")
+          for i, result in enumerate(current_results[:3]):
+              log_path = result.get('log_relpath', 'N/A')
+              runner = result.get('runner_label', result.get('runner', 'unknown'))
+              print(f"  {i+1}. {result['package']} ({runner}): {log_path}")
 
           # Generate HTML that dynamically loads results.json (like the existing results.html)
           html = f'''<!DOCTYPE html>
@@ -714,9 +983,9 @@ jobs:
                           <div class="timeline-date">{datetime.fromtimestamp(run["timestamp"]).strftime("%Y-%m-%d %H:%M")} UTC</div>
                           <div class="timeline-stats">Run {run["run_id"]} | {run["total"]} packages | {run["success"]}✅ {run["failed"]}❌</div>
                       </div>
-                      ''' for run in available_runs[:5]])}
+                      ''' for run in available_runs[:10]])}
                       <div style="color: #6c757d; font-size: 12px; margin-top: 10px;">
-                          💡 Click on any run to view its results and logs
+                          💡 Click on any run to view its results and logs • Showing last 10 runs
                       </div>
                   </div>
 
@@ -777,8 +1046,8 @@ jobs:
                   </div>
 
                   <div class="footer">
-                      <p>Generated on {datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S UTC') if timestamp else 'Unknown'}</p>
-                      <p>Run ID: <a href="{run_url}" target="_blank">{run_id}</a> | SHA: {sha[:8]}</p>
+                      <p>Generated on {datetime.fromtimestamp(current_timestamp).strftime('%Y-%m-%d %H:%M:%S UTC') if current_timestamp else 'Unknown'}</p>
+                      <p>Run ID: <a href="{current_run_url}" target="_blank">{current_run_id}</a> | SHA: {current_sha[:8]}</p>
                   </div>
               </div>
 
@@ -787,7 +1056,6 @@ jobs:
                   let filteredResults = [];
                   let currentPage = 1;
                   let currentRun = 'current';
-                  let availableRuns = [];
                   const itemsPerPage = 50;
 
                   // Available runs data
@@ -804,11 +1072,11 @@ jobs:
                           if (runId === 'current') {{
                               response = await fetch('results.json');
                           }} else {{
-                              response = await fetch(`runs/results-${runId}.json`);
+                              response = await fetch('runs/results-' + runId + '.json');
                           }}
 
                           if (!response.ok) {{
-                              throw new Error(`Failed to load results for run ${runId}`);
+                              throw new Error('Failed to load results for run ' + runId);
                           }}
 
                           allResults = await response.json();
@@ -838,7 +1106,7 @@ jobs:
                           const run = availableRuns.find(r => r.run_id === runId);
                           if (run) {{
                               const date = new Date(run.timestamp * 1000).toISOString().replace('T', ' ').replace('.000Z', ' UTC');
-                              runInfo.textContent = `SHA: ${run.sha.substring(0, 8)} | Generated: ${date}`;
+                              runInfo.textContent = 'SHA: ' + run.sha.substring(0, 8) + ' | Generated: ' + date;
                           }}
                       }}
                   }}
@@ -957,25 +1225,42 @@ jobs:
                       const pageResults = filteredResults.slice(start, end);
 
                       tbody.innerHTML = pageResults.map(result => {{
-                          // Generate log file path based on current run
-                          const logPath = currentRun === 'current'
-                              ? `logs/run-${currentRun}/${result.log_relpath}`
-                              : `logs/run-${currentRun}/${result.log_relpath}`;
+                          // Generate log file path based on current run and log_relpath
+                          const githubUrl = result.run_url;
+                          let logUrl = githubUrl; // Fallback to GitHub Actions
 
-                          return `
-                          <tr>
-                              <td><span class="package-name">${result.package}</span></td>
-                              <td><span class="tag">${result.tag}</span></td>
-                              <td><span class="runner">${result.runner_label || result.runner || 'unknown'}</span></td>
-                              <td><span class="status ${result.status}">${result.status}</span></td>
-                              <td><span class="duration">${result.duration_s}s</span></td>
-                              <td><span class="failure-point">${result.failure_point}</span></td>
-                              <td>
-                                  <a href="${result.run_url}" target="_blank" title="View GitHub Actions Log">GitHub</a> |
-                                  <a href="${logPath}" target="_blank" title="View Detailed Log File">Log File</a>
-                              </td>
-                          </tr>
-                      `;
+                          if (result.log_relpath) {{
+                              // Use actual run ID from the result data
+                              const actualRunId = result.run_id || 'current';
+                              // Create runner-specific filename
+                              const runnerLabel = result.runner_label || result.runner || 'unknown';
+                              const baseFileName = result.log_relpath.replace('logs/', '').replace('.log', '');
+                              let runnerSuffix = '';
+
+                              if (runnerLabel.toLowerCase().includes('orin')) {{
+                                  runnerSuffix = '_orin';
+                              }} else if (runnerLabel.toLowerCase().includes('thor')) {{
+                                  runnerSuffix = '_thor';
+                              }} else {{
+                                  runnerSuffix = '_' + runnerLabel.toLowerCase();
+                              }}
+
+                              const uniqueFileName = baseFileName + runnerSuffix + '.log';
+                              logUrl = 'logs/run-' + actualRunId + '/' + uniqueFileName;
+                          }}
+
+                          return '<tr>' +
+                              '<td><span class="package-name">' + result.package + '</span></td>' +
+                              '<td><span class="tag">' + result.tag + '</span></td>' +
+                              '<td><span class="runner">' + (result.runner_label || result.runner || 'unknown') + '</span></td>' +
+                              '<td><span class="status ' + result.status + '">' + result.status + '</span></td>' +
+                              '<td><span class="duration">' + result.duration_s + 's</span></td>' +
+                              '<td><span class="failure-point">' + result.failure_point + '</span></td>' +
+                              '<td>' +
+                                  '<a href="' + githubUrl + '" target="_blank" title="View GitHub Actions Log">GitHub Actions</a>' +
+                                  (result.log_relpath ? ' | <a href="' + logUrl + '" target="_blank" title="View Detailed Log File">Log File</a>' : '') +
+                              '</td>' +
+                          '</tr>';
                       }}).join('');
 
                       updatePagination();
@@ -987,7 +1272,7 @@ jobs:
                       const prevBtn = document.getElementById('prev-page');
                       const nextBtn = document.getElementById('next-page');
 
-                      pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+                      pageInfo.textContent = 'Page ' + currentPage + ' of ' + totalPages;
                       prevBtn.disabled = currentPage === 1;
                       nextBtn.disabled = currentPage === totalPages;
                   }}
@@ -1021,26 +1306,26 @@ jobs:
                   function showComparison() {{
                       // Future: Implement comparison between different runs
                       const comparisonStats = document.getElementById('comparison-stats');
-                      comparisonStats.innerHTML = `
-                          <div class="comparison-stat">
-                              <h4>Current Run</h4>
-                              <div class="comparison-value">${allResults.length}</div>
-                              <div>Total Packages</div>
-                          </div>
-                          <div class="comparison-stat">
-                              <h4>Success Rate</h4>
-                              <div class="comparison-value">${(allResults.filter(r => r.status === 'success').length / allResults.length * 100).toFixed(1)}%</div>
-                              <div>Current Run</div>
-                          </div>
-                          <div class="comparison-stat">
-                              <h4>Average Duration</h4>
-                              <div class="comparison-value">${(allResults.reduce((sum, r) => sum + r.duration_s, 0) / allResults.length).toFixed(1)}s</div>
-                              <div>Current Run</div>
-                          </div>
-                      `;
+                      comparisonStats.innerHTML =
+                          '<div class="comparison-stat">' +
+                              '<h4>Current Run</h4>' +
+                              '<div class="comparison-value">' + allResults.length + '</div>' +
+                              '<div>Total Packages</div>' +
+                          '</div>' +
+                          '<div class="comparison-stat">' +
+                              '<h4>Success Rate</h4>' +
+                              '<div class="comparison-value">' + (allResults.filter(r => r.status === 'success').length / allResults.length * 100).toFixed(1) + '%</div>' +
+                              '<div>Current Run</div>' +
+                          '</div>' +
+                          '<div class="comparison-stat">' +
+                              '<h4>Average Duration</h4>' +
+                              '<div class="comparison-value">' + (allResults.reduce((sum, r) => sum + r.duration_s, 0) / allResults.length).toFixed(1) + 's</div>' +
+                              '<div>Current Run</div>' +
+                          '</div>';
                   }}
 
                   // Initialize
+                  setupEventListeners();
                   loadResults();
               </script>
           </body>
@@ -1051,7 +1336,7 @@ jobs:
           with open('./dashboard.html', 'w') as f:
               f.write(html)
 
-          print(f"Generated dynamic dashboard with {len(results)} results")
+          print(f"Generated dynamic dashboard with {len(current_results)} results")
           EOF
 
       - name: Generate markdown report
@@ -1163,22 +1448,69 @@ jobs:
       - name: Setup Pages
         if: steps.check-results.outputs.exists == 'true'
         uses: actions/configure-pages@v4
+        with:
+          enablement: true
+        continue-on-error: true
+
+      - name: Prepare Pages directory
+        if: steps.check-results.outputs.exists == 'true'
+        run: |
+          mkdir -p ./pages
+          cp dashboard.html ./pages/index.html 2>/dev/null || echo "dashboard.html not found, skipping"
+          cp results-data/results.json ./pages/results.json 2>/dev/null || echo "results.json not found, skipping"
+          cp -r runs ./pages/ 2>/dev/null || echo "runs directory not found, creating empty"
+          cp -r logs ./pages/ 2>/dev/null || echo "logs directory not found, creating empty"
+          # Create empty directories if they don't exist
+          mkdir -p ./pages/runs ./pages/logs
+          # List what we're uploading
+          echo "Pages directory contents:"
+          find ./pages -type f | head -30
+          echo ""
+          echo "🔍 Detailed directory structure:"
+          echo "📁 ./pages structure:"
+          ls -la ./pages/
+          echo ""
+          echo "📁 ./pages/logs structure:"
+          if [ -d "./pages/logs" ]; then
+            find ./pages/logs -type f -name "*.log" | head -10
+            echo "📊 Log file count: $(find ./pages/logs -name "*.log" | wc -l)"
+          else
+            echo "❌ No ./pages/logs directory found!"
+          fi
+          echo ""
+          echo "📁 ./pages/runs structure:"
+          if [ -d "./pages/runs" ]; then
+            ls -la ./pages/runs/
+          else
+            echo "❌ No ./pages/runs directory found!"
+          fi
+          echo ""
+          echo "Checking for index.html:"
+          ls -la ./pages/index.html || echo "❌ index.html not found!"
+          echo "Checking for results.json:"
+          ls -la ./pages/results.json || echo "❌ results.json not found!"
 
       - name: Upload Pages artifact
         if: steps.check-results.outputs.exists == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: |
-            ./dashboard.html
-            ./results.json
-            ./runs/
-            ./logs/
-          name: dashboard
+          path: ./pages
 
       - name: Deploy to GitHub Pages
         if: steps.check-results.outputs.exists == 'true'
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Pages deployment status
+        if: steps.check-results.outputs.exists == 'true'
+        run: |
+          if [ "${{ steps.deployment.outcome }}" = "success" ]; then
+            echo "✅ Successfully deployed to GitHub Pages!"
+            echo "Dashboard URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+          else
+            echo "⚠️ Pages deployment failed"
+            echo "Check the deploy step above for error details"
+          fi
 
       - name: Upload markdown report
         if: steps.check-results.outputs.exists == 'true'
@@ -1189,7 +1521,7 @@ jobs:
           retention-days: 30
 
       - name: Comment on PR (if applicable)
-        if: steps.check-results.outputs.exists == 'true' && github.event.workflow_run.pull_requests
+        if: false  # Temporarily disabled due to null pointer error - will re-enable after merge to main
         uses: actions/github-script@v7
         with:
           script: |
@@ -1204,8 +1536,8 @@ jobs:
               comment.body.includes('🚀 Jetson Containers Build Dashboard')
             );
 
-            const dashboardUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/dashboard.html`;
-            const reportUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.run_id}`;
+            const dashboardUrl = 'https://' + context.repo.owner + '.github.io/' + context.repo.repo + '/dashboard.html';
+            const reportUrl = 'https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.run_id;
 
             const commentBody = `## 🚀 Jetson Containers Build Dashboard
 

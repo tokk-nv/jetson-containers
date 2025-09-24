@@ -21,6 +21,10 @@ on:
         description: "Exclude *-builder tags? true/false"
         required: false
         default: "true"
+      use_cache:
+        description: "Use docker image cache to speed up the build (not fresh build)"
+        required: false
+        default: "false"
       chunk_size:
         description: 'Packages per job; set "auto" to size from target_jobs_per_platform'
         required: false
@@ -36,7 +40,7 @@ on:
       pkg_timeout_minutes:
         description: "Per-package timeout (minutes)"
         required: false
-        default: "30"
+        default: "120"
 
 permissions:
   contents: read
@@ -107,6 +111,7 @@ jobs:
           echo "subset_mode='${{ github.event.inputs.subset_mode || 'list' }}'"
           echo "subset_value='${{ github.event.inputs.subset_value || 'build-essential' }}'"
           echo "exclude_builders='${{ github.event.inputs.exclude_builders || 'true' }}'"
+          echo "use_cache='${{ github.event.inputs.use_cache || 'false' }}'"
           echo "chunk_size='${{ github.event.inputs.chunk_size || 'auto' }}'"
           echo "target_jobs_per_platform='${{ github.event.inputs.target_jobs_per_platform || '60' }}'"
           echo "max_parallel='${{ github.event.inputs.max_parallel || '32' }}'"
@@ -119,6 +124,7 @@ jobs:
           echo "- **subset_mode**: '${{ github.event.inputs.subset_mode || 'list' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **subset_value**: '${{ github.event.inputs.subset_value || 'build-essential' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **exclude_builders**: '${{ github.event.inputs.exclude_builders || 'true' }}'" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **use_cache**: '${{ github.event.inputs.use_cache || 'false' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **chunk_size**: '${{ github.event.inputs.chunk_size || 'auto' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **target_jobs_per_platform**: '${{ github.event.inputs.target_jobs_per_platform || '60' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **max_parallel**: '${{ github.event.inputs.max_parallel || '32' }}'" >> "$GITHUB_STEP_SUMMARY"
@@ -515,7 +521,7 @@ jobs:
     runs-on:
       - self-hosted
       - ${{ matrix.platform }}
-    timeout-minutes: 60
+    timeout-minutes: ${{ fromJSON(inputs.pkg_timeout_minutes) }}  # package timeout = job timeout
     steps:
       - name: Print runner info
         run: |
@@ -537,16 +543,25 @@ jobs:
           rm -rf build/ test/ || true
           # Clean up any leftover results from previous runs
           rm -f results.json || true
-          # Clean up any old Docker container images
+          # Clean up Docker containers and networks (conditional image cleanup)
           {
           LOCK="${RUNNER_TEMP:-/tmp}/docker-prune.lock"
           exec 9>"$LOCK" || true
           if flock -w 300 9; then
             echo "Acquired Docker prune lock: $LOCK"
             for i in {1..10}; do
-              if timeout 180 docker system prune -af; then
-                echo "Docker prune succeeded"
-                break
+              if "${{ github.event.inputs.use_cache || 'false' }}" == "true"; then
+                # Use cache: only remove containers/networks, keep images
+                if timeout 180 docker system prune -f; then
+                  echo "Docker prune (cache-friendly) succeeded"
+                  break
+                fi
+              else
+                # Fresh build: remove everything including images
+                if timeout 180 docker system prune -af; then
+                  echo "Docker prune (full clean) succeeded"
+                  break
+                fi
               fi
               echo "Prune busy or failed (attempt $i/10). Retrying..."
               sleep $((i*3))
@@ -679,7 +694,13 @@ jobs:
             except:
               pass
             try:
-              cmd = ["./build.sh", "--logs", per_dir, pkg]
+              # Build command with conditional caching
+              if "${{ github.event.inputs.use_cache || 'false' }}" == "true":
+                  # Use cache: build without --no-cache flag
+                  cmd = ["./build.sh", "--logs", per_dir, pkg]
+              else:
+                  # Fresh build: use --no-cache flag
+                  cmd = ["./build.sh", "--logs", per_dir, "--build-flags=--no-cache", pkg]
               print(f"[build] cmd: {' '.join(cmd)}")
 
               # Use PIPE to capture output in real-time
