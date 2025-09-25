@@ -17,9 +17,16 @@ jobs:
   publish-dashboard:
     name: Publish Dashboard
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'cancelled' }}
 
     steps:
+      - name: Check workflow run status
+        run: |
+          echo "🔍 Matrix workflow conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo "📊 Matrix workflow status: ${{ github.event.workflow_run.status }}"
+          echo "🎯 Dashboard will run regardless of matrix workflow conclusion"
+          echo "✅ This ensures dashboard is published even if some matrix jobs timeout"
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
