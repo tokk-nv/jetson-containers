@@ -1065,12 +1065,19 @@ jobs:
           echo "🔍 Debugging downloaded artifacts:"
           echo "Pattern used: results-*-chunk-*-${{ github.run_attempt }}"
           echo "Run attempt: ${{ github.run_attempt }}"
+          echo "Expected pattern should match: results-orin-chunk-0-1, results-thor-chunk-0-1, etc."
+          echo ""
           echo "Files in _in directory:"
           find _in -type f -name "*.json" | sort || echo "No JSON files found"
+          echo ""
           echo "All files in _in directory:"
           find _in -type f | sort || echo "No files found"
+          echo ""
           echo "Directory structure:"
           ls -la _in/ || echo "_in directory not found"
+          echo ""
+          echo "Checking if pattern matches any files:"
+          find _in -name "results-*-chunk-*-${{ github.run_attempt }}" | sort || echo "No files match the exact pattern"
 
       - name: Merge JSON
         run: |
