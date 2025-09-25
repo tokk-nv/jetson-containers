@@ -386,12 +386,13 @@ jobs:
           if [[ -z "$TARGET" || "$TARGET" -lt 1 ]]; then TARGET=60; fi
           K=$(( (M + TARGET - 1) / TARGET ))   # ceil(M / TARGET)
 
-          # Smart minimum chunk size: only apply minimum if we have enough packages
-          # If we have very few packages, use smaller chunks to avoid empty slots
-          if [[ "$M" -le 10 ]]; then
-            # For small package counts, use smaller chunks (minimum 1)
-            K=$(( M > 0 ? M : 1 ))
-            echo "Small package count ($M), using chunk_size=$K to avoid empty slots"
+          # Smart chunk sizing: enable parallel execution for small package counts
+          # For small counts, create multiple chunks to utilize available runners
+          if [[ "$M" -le 20 ]]; then
+            # For small package counts, create up to 5 chunks for parallel execution
+            K=$(( (M + 4) / 5 ))  # ceil(M / 5) for up to 5 chunks
+            if [[ "$K" -lt 1 ]]; then K=1; fi  # Ensure at least 1 chunk
+            echo "Small package count ($M), using chunk_size=$K for parallel execution (up to 5 chunks)"
           elif [[ "$K" -lt 5 ]]; then
             # For larger package counts, maintain minimum of 5 to avoid too many tiny jobs
             K=5
