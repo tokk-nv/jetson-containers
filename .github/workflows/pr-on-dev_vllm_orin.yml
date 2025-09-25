@@ -1,8 +1,10 @@
-name: PACKAGE_NAME (dev)
+name: VLLM dev branch Jetson AGX Orin 64GB
 
 on:
+  push:
+    branches: [ dev ]
   pull_request:
-    types: [ready_for_review, synchronize, reopened]
+    types: [opened, synchronize, reopened]
     branches: [ dev ]
   workflow_dispatch:
     inputs:
@@ -17,10 +19,9 @@ on:
         default: 'dev'
 
 jobs:
-  test-package-PLATFORM:
-    runs-on: [self-hosted, linux, arm64, jetson, PLATFORM]
-    name: "Package Build Test (PLATFORM)"
-    if: github.event.pull_request.draft == false
+  test-package-orin:
+    runs-on: [self-hosted, linux, arm64, jetson, orin]
+    name: "Package Build Test (Jetson AGX Orin 64GB)"
 
     steps:
       - name: Pre-checkout cleanup
@@ -37,7 +38,7 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_repo != '' && inputs.fork_repo || github.repository }}
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.fork_branch != '' && inputs.fork_branch || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && (inputs.fork_branch != '' && inputs.fork_branch || 'dev') || github.ref }}
 
       - name: Display system info
         run: bash .github/workflows/scripts/step-system-info.sh
@@ -51,13 +52,13 @@ jobs:
       - name: Show git repository state
         run: bash .github/workflows/scripts/step-git-status.sh
 
-      - name: Test build PACKAGE_NAME package on PLATFORM
+      - name: Test build vllm package on orin
         id: package-test
-        run: bash .github/workflows/scripts/step-build-package.sh PACKAGE_NAME
+        run: bash .github/workflows/scripts/step-build-package.sh vllm
 
       - name: Analyze build results
         if: always()
-        run: bash .github/workflows/scripts/step-analyze-results.sh PACKAGE_NAME ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }}
+        run: bash .github/workflows/scripts/step-analyze-results.sh vllm ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }}
 
       - name: Test build results
-        run: bash .github/workflows/scripts/step-test-results-summary.sh PACKAGE_NAME ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }} ${{ steps.package-test.outputs.failure_phase }} ${{ steps.package-test.outputs.failure_stage }} ${{ steps.package-test.outputs.failure_component }}
+        run: bash .github/workflows/scripts/step-test-results-summary.sh vllm ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }} ${{ steps.package-test.outputs.failure_phase }} ${{ steps.package-test.outputs.failure_stage }} ${{ steps.package-test.outputs.failure_component }}

@@ -1,0 +1,15 @@
+# Requirements for GitHub Actions workflow scripts
+# These are standard library modules, but listed here for documentation
+
+# Standard library modules used:
+# - os
+# - sys
+# - json
+# - zipfile
+# - shutil
+# - re
+# - typing
+# - datetime
+
+# Third-party dependencies:
+requests>=2.25.0
