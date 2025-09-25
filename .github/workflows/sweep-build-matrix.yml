@@ -385,7 +385,7 @@ jobs:
           TARGET="${{ github.event.inputs.target_jobs_per_platform || '60' }}"
           if [[ -z "$TARGET" || "$TARGET" -lt 1 ]]; then TARGET=60; fi
           K=$(( (M + TARGET - 1) / TARGET ))   # ceil(M / TARGET)
-          
+
           # Smart minimum chunk size: only apply minimum if we have enough packages
           # If we have very few packages, use smaller chunks to avoid empty slots
           if [[ "$M" -le 10 ]]; then
@@ -397,6 +397,7 @@ jobs:
             K=5
             echo "Applying minimum chunk_size=5 for larger package counts"
           fi
+
           echo "chunk_size=$K" >> "$GITHUB_OUTPUT"
           echo "Auto chunk_size=$K (M=$M, target_jobs_per_platform=$TARGET)"
 
