@@ -89,22 +89,92 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
         runner = result.get('runner_label', result.get('runner', 'unknown'))
         print(f"  {i+1}. {result['package']} ({runner}): {log_path}")
 
-    # Generate timeline items for available runs
+    # Generate timeline items for available runs (mathematical axis approach)
     timeline_items = []
-    for run in available_runs[:10]:
-        timeline_item = f'''
-            <div class="timeline-item" data-run="{run["run_id"]}">
-                <div class="timeline-date">{datetime.fromtimestamp(run["timestamp"]).strftime("%Y-%m-%d %H:%M")} UTC</div>
-                <div class="timeline-stats">Run {run["run_id"]} | {run["total"]} packages | {run["success"]}✅ {run["failed"]}❌</div>
-            </div>'''
-        timeline_items.append(timeline_item)
+
+    # Calculate positions for timeline markers based on actual time differences
+    if available_runs:
+        # Use only historical run timestamps for range calculation
+        all_timestamps = [run["timestamp"] for run in available_runs[:10]]
+
+        oldest_timestamp = min(all_timestamps)
+        newest_timestamp = max(all_timestamps)
+        time_range = newest_timestamp - oldest_timestamp if newest_timestamp != oldest_timestamp else 86400  # Default to 1 day if same
+
+        print(f"🕐 Timeline range: {time_range/86400:.1f} days ({oldest_timestamp} to {newest_timestamp})")
+
+        for i, run in enumerate(available_runs[:10]):
+            # Calculate position percentage based on actual time difference
+            # Map to 10% - 90% range to leave more space before oldest and after latest
+            if time_range > 0:
+                time_ratio = (run["timestamp"] - oldest_timestamp) / time_range
+                position_percent = 10 + (time_ratio * 80)  # 10% to 90% range
+            else:
+                # Fallback to equal spacing if timestamps are identical
+                position_percent = 10 + (i * (80 / len(available_runs[:10])))
+
+            print(f"   📍 Run {run['run_id']}: {time_ratio:.3f} ratio → {position_percent:.1f}% position")
+
+            # Determine build health status
+            success_rate = (run["success"] / run["total"]) * 100 if run["total"] > 0 else 0
+            if success_rate == 100:
+                health_status = "perfect"
+                health_color = "#28a745"  # Green
+                health_label = "All Success"
+            elif success_rate >= 80:
+                health_status = "good"
+                health_color = "#ffc107"  # Yellow
+                health_label = "Mostly Success"
+            elif success_rate >= 50:
+                health_status = "partial"
+                health_color = "#fd7e14"  # Orange
+                health_label = "Partial Failure"
+            else:
+                health_status = "poor"
+                health_color = "#dc3545"  # Red
+                health_label = "Major Issues"
+
+            # Check if this is the most recent run (first in the sorted list)
+            is_latest = (i == 0)
+            marker_class = f"timeline-marker {'latest-run' if is_latest else ''}"
+
+            timeline_item = f'''
+                <div class="{marker_class}" data-run="{run["run_id"]}" style="left: {position_percent}%;">
+                    <div class="marker-dot {health_status} {'latest' if is_latest else ''}" style="background-color: {health_color};"></div>
+                    <div class="marker-popup">
+                        <div class="popup-header">
+                            <strong>Run {run["run_id"]}</strong>
+                            <div class="popup-date" data-timestamp="{run["timestamp"]}"></div>
+                        </div>
+                        <div class="popup-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Status:</span>
+                                <span class="stat-value {health_status}">{health_label}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Packages:</span>
+                                <span class="stat-value">{run["total"]} attempted</span>
+                            </div>
+                            <div class="stat-breakdown">
+                                <span class="success-count">{run["success"]} ✅</span>
+                                <span class="failed-count">{run["failed"]} ❌</span>
+                                {f'<span class="timeout-count">{run["timeout"]} ⏱️</span>' if run["timeout"] > 0 else ''}
+                                {f'<span class="oom-count">{run["oom"]} 💥</span>' if run["oom"] > 0 else ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>'''
+            timeline_items.append(timeline_item)
 
     timeline_html = ''.join(timeline_items)
 
     # Generate run options for select dropdown
     run_options = []
-    for run in available_runs:
-        option = f'<option value="{run["run_id"]}">Run {run["run_id"]} - {datetime.fromtimestamp(run["timestamp"]).strftime("%Y-%m-%d %H:%M")} UTC</option>'
+    for i, run in enumerate(available_runs):
+        # Mark the first (most recent) run as selected and add 🆕 emoji
+        selected = 'selected' if i == 0 else ''
+        emoji = ' 🆕' if i == 0 else ''
+        option = f'<option value="{run["run_id"]}" data-timestamp="{run["timestamp"]}" {selected}>Run {run["run_id"]}{emoji}</option>'
         run_options.append(option)
 
     run_options_html = ''.join(run_options)
@@ -165,7 +235,8 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
 
         .stat-label {{
             font-size: 0.9em;
-            opacity: 0.8;
+            color: #212529;
+            font-weight: 600;
         }}
 
         .run-selector {{
@@ -193,44 +264,215 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
         }}
 
         .timeline {{
-            padding: 15px 20px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
-            max-height: 120px;
-            overflow-y: auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 20px 0;
         }}
 
-        .timeline-item {{
-            display: inline-block;
-            margin: 5px 10px 5px 0;
-            padding: 8px 12px;
+        .timeline-axis-container {{
+            position: relative;
+            width: 100%;
+            height: 80px;
+            margin: 20px 0;
+        }}
+
+        .timeline-axis {{
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }}
+
+        .axis-line {{
+            position: absolute;
+            top: 40px;
+            left: 2%;
+            right: 2%;
+            height: 2px;
+            background: linear-gradient(to right, #6c757d, #007bff);
+            border-radius: 1px;
+        }}
+
+        .axis-line::after {{
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: -3px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid #007bff;
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+        }}
+
+        .axis-labels {{
+            position: absolute;
+            top: 55px;
+            left: 2%;
+            right: 2%;
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #6c757d;
+            font-weight: 500;
+        }}
+
+        .timeline-marker {{
+            position: absolute;
+            top: 30px;
+            transform: translateX(-50%);
+            cursor: pointer;
+            z-index: 10;
+        }}
+
+        .marker-dot {{
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            position: relative;
+        }}
+
+        .marker-dot.perfect {{
+            background: #28a745;
+            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.3);
+        }}
+
+        .marker-dot.good {{
+            background: #ffc107;
+            box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.3);
+        }}
+
+        .marker-dot.partial {{
+            background: #fd7e14;
+            box-shadow: 0 0 0 3px rgba(253, 126, 20, 0.3);
+        }}
+
+        .marker-dot.poor {{
+            background: #dc3545;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.3);
+        }}
+
+        .marker-dot.current {{
+            background: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3);
+            animation: pulse 2s infinite;
+        }}
+
+        .marker-dot.latest {{
+            width: 24px;
+            height: 24px;
+            border: 4px solid white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transform: scale(1.1);
+        }}
+
+        @keyframes pulse {{
+            0% {{ box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3); }}
+            50% {{ box-shadow: 0 0 0 6px rgba(0, 123, 255, 0.1); }}
+            100% {{ box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3); }}
+        }}
+
+        .timeline-marker:hover .marker-dot {{
+            transform: scale(1.2);
+        }}
+
+        .marker-popup {{
+            position: absolute;
+            bottom: 35px;
+            left: 50%;
+            transform: translateX(-50%);
             background: white;
             border: 1px solid #dee2e6;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 12px;
+            min-width: 200px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 20;
+        }}
+
+        .timeline-marker:hover .marker-popup {{
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(-5px);
+        }}
+
+        .popup-header {{
+            margin-bottom: 8px;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 6px;
+        }}
+
+        .popup-header strong {{
+            color: #495057;
+            font-size: 14px;
+        }}
+
+        .popup-date {{
+            font-size: 11px;
+            color: #6c757d;
+            margin-top: 2px;
+        }}
+
+        .popup-stats {{
             font-size: 12px;
         }}
 
-        .timeline-item:hover {{
-            background: #e9ecef;
-            border-color: #007bff;
+        .stat-item {{
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
         }}
 
-        .timeline-item.active {{
-            background: #007bff;
-            color: white;
-            border-color: #007bff;
+        .stat-label {{
+            color: #212529;
+            font-weight: 600;
+        }}
+
+        .stat-value {{
+            font-weight: 600;
+        }}
+
+        .stat-value.perfect {{ color: #28a745; }}
+        .stat-value.good {{ color: #ffc107; }}
+        .stat-value.partial {{ color: #fd7e14; }}
+        .stat-value.poor {{ color: #dc3545; }}
+
+        .stat-breakdown {{
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid #f8f9fa;
+            font-size: 11px;
+        }}
+
+        .stat-breakdown span {{
+            font-weight: 500;
+        }}
+
+        .success-count {{ color: #28a745; }}
+        .failed-count {{ color: #dc3545; }}
+        .timeout-count {{ color: #ffc107; }}
+        .oom-count {{ color: #fd7e14; }}
+
+        /* Legacy timeline classes for backward compatibility */
+        .timeline-item {{
+            display: none; /* Hide old timeline items */
         }}
 
         .timeline-date {{
-            font-weight: bold;
-            color: #495057;
+            display: none;
         }}
 
         .timeline-stats {{
-            color: #6c757d;
-            font-size: 11px;
+            display: none;
         }}
 
         .controls {{
@@ -262,8 +504,8 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
 
         .table-container {{
             overflow-x: auto;
-            max-height: 70vh;
-            overflow-y: auto;
+            /* Removed max-height and overflow-y to prevent double scrollbars */
+            /* Let the main window handle vertical scrolling */
         }}
 
         table {{
@@ -288,6 +530,11 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
             padding: 12px 10px;
             border-bottom: 1px solid #dee2e6;
             vertical-align: top;
+        }}
+
+        /* Right-align Duration column (5th column) */
+        th:nth-child(5), td:nth-child(5) {{
+            text-align: right;
         }}
 
         tr:hover {{
@@ -477,23 +724,28 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
         <div class="run-selector">
             <label for="run-select"><strong>Select Run:</strong></label>
             <select id="run-select" class="run-select">
-                <option value="current">Current Run ({current_run_id})</option>
                 {run_options_html}
             </select>
-            <div class="run-info" id="run-info">
-                SHA: {current_sha[:8]} | Generated: {datetime.fromtimestamp(current_timestamp).strftime('%Y-%m-%d %H:%M:%S UTC') if current_timestamp else 'Unknown'}
+            <div class="run-info" id="run-info" data-timestamp="{current_timestamp}">
+                SHA: {current_sha[:8]} | Generated: <span class="timestamp-display"></span>
             </div>
         </div>
 
         <div class="timeline" id="timeline">
-            <div style="font-weight: bold; margin-bottom: 10px; color: #495057;">Recent Runs Timeline:</div>
-            <div class="timeline-item active" data-run="current">
-                <div class="timeline-date">Current Run</div>
-                <div class="timeline-stats">Run ID: {current_run_id} | {len(current_results)} packages</div>
+            <div style="font-weight: bold; margin-bottom: 15px; color: #495057;">📊 Recent Runs Timeline:</div>
+            <div class="timeline-axis-container">
+                <div class="timeline-axis">
+                    <div class="axis-line"></div>
+                    <div class="axis-labels">
+                        <span class="axis-label-left">Oldest</span>
+                        <span class="axis-label-right">Latest</span>
+                    </div>
+                    <!-- Current run marker removed - latest historical run is highlighted instead -->
+                    {timeline_html}
+                </div>
             </div>
-            {timeline_html}
-            <div style="color: #6c757d; font-size: 12px; margin-top: 10px;">
-                💡 Click on any run to view its results and logs • Showing last 10 runs
+            <div style="color: #6c757d; font-size: 12px; margin-top: 15px;">
+                💡 Hover over markers to see details • Click to view results • Timeline shows last 10 runs
             </div>
         </div>
 
@@ -554,7 +806,7 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
         </div>
 
         <div class="footer">
-            <p>Generated on {datetime.fromtimestamp(current_timestamp).strftime('%Y-%m-%d %H:%M:%S UTC') if current_timestamp else 'Unknown'}</p>
+            <p>Generated on <span class="timestamp-display" data-timestamp="{current_timestamp}"></span></p>
             <p>Run ID: <a href="{current_run_url}" target="_blank">{current_run_id}</a> | SHA: {current_sha[:8]}</p>
         </div>
     </div>
@@ -565,6 +817,97 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
         let currentPage = 1;
         let currentRun = 'current';
         const itemsPerPage = 50;
+
+        // Timestamp formatting functions
+        function formatTimestamp(timestamp) {{
+            if (!timestamp) return 'Unknown';
+            const date = new Date(timestamp * 1000);
+            const options = {{
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                timeZoneName: 'short'
+            }};
+            return date.toLocaleString(undefined, options);
+        }}
+
+        function formatTimelineDate(timestamp) {{
+            if (!timestamp) return 'Unknown';
+            const date = new Date(timestamp * 1000);
+            const options = {{
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZoneName: 'short'
+            }};
+            return date.toLocaleString(undefined, options);
+        }}
+
+        function formatRunOptionDate(timestamp) {{
+            if (!timestamp) return '';
+            const date = new Date(timestamp * 1000);
+            const options = {{
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZoneName: 'short'
+            }};
+            return ' - ' + date.toLocaleString(undefined, options);
+        }}
+
+        // Function to format duration in compact h m s format
+        function formatDuration(seconds) {{
+            if (!seconds || seconds < 0) return '0 s';
+
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+
+            let result = [];
+
+            if (hours > 0) {{
+                result.push(hours + ' h');
+            }}
+            if (minutes > 0) {{
+                result.push(minutes + ' m');
+            }}
+            if (secs > 0 || result.length === 0) {{
+                result.push(secs + ' s');
+            }}
+
+            return result.join(' ');
+        }}
+
+        // Initialize timestamp displays on page load
+        function initializeTimestamps() {{
+            // Update all timeline popup dates
+            document.querySelectorAll('.popup-date[data-timestamp]').forEach(element => {{
+                const timestamp = parseInt(element.getAttribute('data-timestamp'));
+                element.textContent = formatTimelineDate(timestamp);
+            }});
+
+            // Update all timestamp displays
+            document.querySelectorAll('.timestamp-display[data-timestamp]').forEach(element => {{
+                const timestamp = parseInt(element.getAttribute('data-timestamp'));
+                element.textContent = formatTimestamp(timestamp);
+            }});
+
+            // Update run selector options with local times
+            document.querySelectorAll('#run-select option[data-timestamp]').forEach(option => {{
+                const timestamp = parseInt(option.getAttribute('data-timestamp'));
+                const runId = option.value;
+                option.textContent = `Run ${{runId}}${{formatRunOptionDate(timestamp)}}`;
+            }});
+
+            // Update current run info
+            updateRunInfo(currentRun);
+        }}
 
         // Available runs data
         const availableRuns = {json.dumps(available_runs, separators=(',', ':'))};
@@ -609,12 +952,19 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
         function updateRunInfo(runId) {{
             const runInfo = document.getElementById('run-info');
             if (runId === 'current') {{
-                runInfo.textContent = `SHA: {current_sha[:8]} | Generated: {datetime.fromtimestamp(current_timestamp).strftime('%Y-%m-%d %H:%M:%S UTC') if current_timestamp else 'Unknown'}`;
+                const timestamp = runInfo.getAttribute('data-timestamp');
+                const timestampSpan = runInfo.querySelector('.timestamp-display');
+                if (timestamp && timestampSpan) {{
+                    timestampSpan.textContent = formatTimestamp(parseInt(timestamp));
+                }}
             }} else {{
                 const run = availableRuns.find(r => r.run_id === runId);
                 if (run) {{
-                    const date = new Date(run.timestamp * 1000).toISOString().replace('T', ' ').replace('.000Z', ' UTC');
-                    runInfo.textContent = 'SHA: ' + run.sha.substring(0, 8) + ' | Generated: ' + date;
+                    const timestampSpan = runInfo.querySelector('.timestamp-display');
+                    if (timestampSpan) {{
+                        timestampSpan.textContent = formatTimestamp(run.timestamp);
+                    }}
+                    runInfo.childNodes[0].textContent = 'SHA: ' + run.sha.substring(0, 8) + ' | Generated: ';
                 }}
             }}
         }}
@@ -660,9 +1010,9 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
             }});
             document.getElementById('compare-btn').addEventListener('click', toggleComparison);
 
-            // Timeline click handlers
-            document.querySelectorAll('.timeline-item').forEach(item => {{
-                item.addEventListener('click', function() {{
+            // Timeline marker click handlers
+            document.querySelectorAll('.timeline-marker').forEach(marker => {{
+                marker.addEventListener('click', function() {{
                     const runId = this.getAttribute('data-run');
                     if (runId) {{
                         document.getElementById('run-select').value = runId;
@@ -675,10 +1025,24 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
         }}
 
         function updateTimelineSelection(runId) {{
-            document.querySelectorAll('.timeline-item').forEach(item => {{
-                item.classList.remove('active');
-                if (item.getAttribute('data-run') === runId) {{
-                    item.classList.add('active');
+            // Remove active class from all markers
+            document.querySelectorAll('.timeline-marker').forEach(marker => {{
+                marker.classList.remove('active');
+                const dot = marker.querySelector('.marker-dot');
+                if (dot) {{
+                    dot.style.transform = '';
+                }}
+            }});
+
+            // Add active class to selected marker
+            document.querySelectorAll('.timeline-marker').forEach(marker => {{
+                if (marker.getAttribute('data-run') === runId) {{
+                    marker.classList.add('active');
+                    const dot = marker.querySelector('.marker-dot');
+                    if (dot) {{
+                        dot.style.transform = 'scale(1.3)';
+                        dot.style.zIndex = '15';
+                    }}
                 }}
             }});
         }}
@@ -768,7 +1132,7 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
                     '<td><span class="tag">' + result.tag + '</span></td>' +
                     '<td><span class="runner">' + (result.runner_label || result.runner || 'unknown') + '</span></td>' +
                     '<td><span class="status ' + result.status + '">' + result.status + '</span></td>' +
-                    '<td><span class="duration">' + result.duration_s + 's</span></td>' +
+                    '<td><span class="duration">' + formatDuration(result.duration_s) + '</span></td>' +
                     '<td><span class="failure-point">' + result.failure_point + '</span></td>' +
                     '<td>' +
                         '<a href="' + githubUrl + '" target="_blank" title="View GitHub Actions Log">GitHub Actions</a>' +
@@ -833,14 +1197,18 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
                 '</div>' +
                 '<div class="comparison-stat">' +
                     '<h4>Average Duration</h4>' +
-                    '<div class="comparison-value">' + (allResults.reduce((sum, r) => sum + r.duration_s, 0) / allResults.length).toFixed(1) + 's</div>' +
+                    '<div class="comparison-value">' + formatDuration(allResults.reduce((sum, r) => sum + r.duration_s, 0) / allResults.length) + '</div>' +
                     '<div>Current Run</div>' +
                 '</div>';
         }}
 
         // Initialize
         setupEventListeners();
-        loadResults();
+        initializeTimestamps();
+        // Load the pre-selected run (first option with 'selected' attribute)
+        const selectedOption = document.querySelector('#run-select option[selected]');
+        const initialRun = selectedOption ? selectedOption.value : document.getElementById('run-select').value;
+        loadResults(initialRun);
     </script>
 </body>
 </html>
