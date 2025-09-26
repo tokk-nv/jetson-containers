@@ -67,30 +67,48 @@ def run_dashboard_scripts(output_path: Path):
     try:
         # Import and run the dashboard scripts
         print("1️⃣ Downloading current artifacts from nvidia-ai-iot/jetson-containers...")
+        current_data_success = False
         try:
             # For local testing, we need to find a recent workflow run first
             success = download_recent_workflow_data(os.environ['GITHUB_TOKEN'], os.environ['GITHUB_REPOSITORY'])
             if success:
                 print("✅ Recent workflow data downloaded from nvidia-ai-iot/jetson-containers")
+                current_data_success = True
             else:
-                print("⚠️ No recent workflow data found, will create minimal test data")
-                # We're already in the output directory, so use Path('.')
-                create_minimal_test_data(Path('.'))
+                print("⚠️ No recent workflow data found, will create minimal current data")
+                # Create minimal current data only, not historical data yet
+                create_minimal_current_data(Path('.'))
         except Exception as e:
             print(f"❌ Current artifacts download failed: {e}")
-            print("   Creating minimal test data for timeline testing...")
-            # We're already in the output directory, so use Path('.')
-            create_minimal_test_data(Path('.'))
+            print("   Creating minimal current data for testing...")
+            # Create minimal current data only, not historical data yet
+            create_minimal_current_data(Path('.'))
 
         print("2️⃣ Downloading historical runs from nvidia-ai-iot/jetson-containers...")
         try:
+            # Clean up any dummy data that might have been created in step 1
+            runs_dir = Path('./runs')
+            if runs_dir.exists():
+                dummy_files = list(runs_dir.glob('results-1000000*.json'))
+                if dummy_files:
+                    print(f"🧹 Cleaning up {len(dummy_files)} dummy run files before downloading real data...")
+                    for dummy_file in dummy_files:
+                        dummy_file.unlink()
+                    print("✅ Dummy data cleaned up")
+            
             from dashboard_download_historical_runs import main as download_historical
             download_historical()
             print("✅ Historical runs downloaded from nvidia-ai-iot/jetson-containers")
         except Exception as e:
             print(f"❌ Historical runs download failed: {e}")
             print("   Using test data for historical runs...")
-            # The create_minimal_test_data already created historical data, so we can continue
+            # Only create dummy data if we don't already have real data
+            runs_dir = Path('./runs')
+            if not runs_dir.exists() or len(list(runs_dir.glob('results-*.json'))) == 0:
+                print("   Creating minimal test data for historical runs...")
+                create_minimal_test_data(Path('.'))
+            else:
+                print("   Real historical data already available, skipping dummy data creation")
 
         print("3️⃣ Processing log files...")
         try:
@@ -204,6 +222,61 @@ def download_recent_workflow_data(github_token: str, repo: str) -> bool:
     except requests.exceptions.RequestException as e:
         print(f"❌ API request failed: {e}")
         return False
+
+def create_minimal_current_data(output_path):
+    """Create minimal current results data only (no historical data)."""
+    
+    print("🎭 Creating minimal current results data...")
+    
+    import time
+    current_time = int(time.time())
+    
+    # Ensure directories exist
+    (output_path / 'results-data').mkdir(exist_ok=True)
+    (output_path / 'logs').mkdir(exist_ok=True)
+    
+    # Create current results only
+    current_results = [{
+        "package": "timeline-test",
+        "tag": "test-timeline-design",
+        "status": "success",
+        "duration_s": 180.0,
+        "timestamp": current_time,
+        "run_id": "current",
+        "run_url": "https://github.com/nvidia-ai-iot/jetson-containers/actions/runs/current",
+        "sha": "timeline1",
+        "runner": "test-runner",
+        "runner_label": "test",
+        "log_relpath": "logs/timeline_test.log",
+        "failure_point": None
+    }]
+    
+    # Save current results
+    results_file = output_path / 'results-data' / 'results.json'
+    with open(results_file, 'w') as f:
+        json.dump(current_results, f, indent=2)
+    
+    # Create a sample log file
+    logs_dir = output_path / 'logs'
+    sample_log = logs_dir / 'timeline_test.log'
+    with open(sample_log, 'w') as f:
+        f.write("""[16:00:00] 🧪 Timeline Test Build Started
+[16:00:01] ✅ This is a test build for timeline design verification
+[16:00:02] 🎨 Testing mathematical timeline with positioned markers
+
+┌─────────────────────────────────────────────────┐
+│ TIMELINE DESIGN TEST                            │
+│ This build demonstrates the new timeline UI     │
+│ with color-coded markers and hover popups       │
+└─────────────────────────────────────────────────┘
+
+[16:00:03] ✅ Timeline test completed successfully!
+""")
+    
+    print(f"✅ Created minimal current data:")
+    print(f"   • 1 current result")
+    print(f"   • Sample log file")
+    print(f"   • Ready for real historical data download!")
 
 def create_minimal_test_data(output_path):
     """Create minimal test data to demonstrate the timeline design."""

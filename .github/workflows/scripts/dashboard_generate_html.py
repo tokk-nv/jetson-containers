@@ -117,7 +117,7 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
 
         print(f"🕐 Timeline range: {time_range/86400:.1f} days ({oldest_timestamp} to {newest_timestamp})")
 
-        for i, run in enumerate(available_runs[:10]):
+        for i, run in enumerate(available_runs[:25]):  # Show up to 25 runs instead of 10
             # Calculate position percentage based on actual time difference
             # Map to 10% - 90% range to leave more space before oldest and after latest
             if time_range > 0:
@@ -125,28 +125,34 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
                 position_percent = 10 + (time_ratio * 80)  # 10% to 90% range
             else:
                 # Fallback to equal spacing if timestamps are identical
-                position_percent = 10 + (i * (80 / len(available_runs[:10])))
+                position_percent = 10 + (i * (80 / len(available_runs[:25])))
 
             print(f"   📍 Run {run['run_id']}: {time_ratio:.3f} ratio → {position_percent:.1f}% position")
 
             # Determine build health status
-            success_rate = (run["success"] / run["total"]) * 100 if run["total"] > 0 else 0
-            if success_rate == 100:
-                health_status = "perfect"
-                health_color = "#28a745"  # Green
-                health_label = "All Success"
-            elif success_rate >= 80:
-                health_status = "good"
-                health_color = "#ffc107"  # Yellow
-                health_label = "Mostly Success"
-            elif success_rate >= 50:
-                health_status = "partial"
-                health_color = "#fd7e14"  # Orange
-                health_label = "Partial Failure"
+            if run["total"] == 0:
+                # Cancelled runs with no data
+                health_status = "cancelled"
+                health_color = "#6c757d"  # Gray
+                health_label = "Cancelled"
             else:
-                health_status = "poor"
-                health_color = "#dc3545"  # Red
-                health_label = "Major Issues"
+                success_rate = (run["success"] / run["total"]) * 100
+                if success_rate == 100:
+                    health_status = "perfect"
+                    health_color = "#28a745"  # Green
+                    health_label = "All Success"
+                elif success_rate >= 80:
+                    health_status = "good"
+                    health_color = "#ffc107"  # Yellow
+                    health_label = "Mostly Success"
+                elif success_rate >= 50:
+                    health_status = "partial"
+                    health_color = "#fd7e14"  # Orange
+                    health_label = "Partial Failure"
+                else:
+                    health_status = "poor"
+                    health_color = "#dc3545"  # Red
+                    health_label = "Major Issues"
 
             # Check if this is the most recent run (first in the sorted list)
             is_latest = (i == 0)
@@ -368,6 +374,12 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
         .marker-dot.poor {{
             background: #dc3545;
             box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.3);
+        }}
+
+        .marker-dot.cancelled {{
+            background: #6c757d;
+            box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.3);
+            opacity: 0.7;
         }}
 
         .marker-dot.current {{
