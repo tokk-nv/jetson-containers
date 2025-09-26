@@ -1223,6 +1223,7 @@ def main():
 
     # Load data
     current_results = load_current_results()
+    print(f"🔍 DEBUG: Loaded {len(current_results)} current results")
     if not current_results:
         print("⚠️ No current results available - generating dashboard with empty results")
         print("ℹ️ This may indicate all build jobs were cancelled due to timeouts")
