@@ -56,6 +56,20 @@ def load_historical_runs() -> List[Dict[str, Any]]:
                     'timeout': sum(1 for r in run_data if r['status'] == 'timeout'),
                     'oom': sum(1 for r in run_data if r['status'] == 'oom_killed')
                 })
+                print(f"✅ Loaded run {run_id} with {len(run_data)} results")
+            else:
+                # Run has no data (cancelled jobs) - create placeholder entry
+                available_runs.append({
+                    'run_id': run_id,
+                    'sha': 'unknown',
+                    'timestamp': os.path.getmtime(os.path.join(runs_dir, filename)),
+                    'total': 0,
+                    'success': 0,
+                    'failed': 0,
+                    'timeout': 0,
+                    'oom': 0
+                })
+                print(f"✅ Loaded run {run_id} with 0 results (cancelled job)")
         except Exception as e:
             print(f"Error loading {filename}: {e}")
 
