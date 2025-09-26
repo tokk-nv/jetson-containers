@@ -78,23 +78,25 @@ def load_historical_runs() -> List[Dict[str, Any]]:
 
     print(f"✅ Found {len(available_runs)} available runs for timeline")
     if len(available_runs) == 0:
-        print("❌ No historical runs available - timeline will only show current run")
+        print("❌ No runs available - timeline will be empty")
         print("ℹ️  This is normal for the first few runs until we build up history")
     else:
         print(f"📊 Timeline will show: {[r['run_id'] for r in available_runs[:5]]}...")
-    print(f"🎯 Total runs that will appear in dashboard: {len(available_runs) + 1}")  # +1 for current
+    print(f"🎯 Total runs that will appear in dashboard: {len(available_runs)}")
 
     return available_runs
 
 
-def generate_dashboard_html(current_results: List[Dict[str, Any]], available_runs: List[Dict[str, Any]]) -> str:
+def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
     """Generate the complete HTML dashboard."""
 
-    # Get current run info
-    current_run_id = current_results[0]['run_id'] if current_results else 'unknown'
+    # Get current run info (most recent run, which is first in the list)
+    current_run = available_runs[0] if available_runs else None
+    current_results = current_run.get('results', []) if current_run else []
+    current_run_id = current_run['run_id'] if current_run else 'unknown'
     current_run_url = current_results[0]['run_url'] if current_results else '#'
     current_sha = current_results[0]['sha'] if current_results else 'unknown'
-    current_timestamp = current_results[0]['timestamp'] if current_results else 0
+    current_timestamp = current_run['timestamp'] if current_run else 0
 
     # Debug: Show log_relpath values from current results
     print(f"🔍 Debug: Current results log_relpath values:")
@@ -108,8 +110,8 @@ def generate_dashboard_html(current_results: List[Dict[str, Any]], available_run
 
     # Calculate positions for timeline markers based on actual time differences
     if available_runs:
-        # Use only historical run timestamps for range calculation
-        all_timestamps = [run["timestamp"] for run in available_runs[:10]]
+        # Use all run timestamps for range calculation
+        all_timestamps = [run["timestamp"] for run in available_runs]
 
         oldest_timestamp = min(all_timestamps)
         newest_timestamp = max(all_timestamps)
@@ -1247,25 +1249,40 @@ def main():
     """Main function to generate dashboard HTML."""
     print("🎨 Generating interactive HTML dashboard...")
 
-    # Load data
-    current_results = load_current_results()
-    print(f"🔍 DEBUG: Loaded {len(current_results)} current results")
-    if not current_results:
-        print("⚠️ No current results available - generating dashboard with empty results")
-        print("ℹ️ This may indicate all build jobs were cancelled due to timeouts")
-        # Continue with empty results instead of exiting
-
+    # Load all historical runs (including current one if it exists)
     available_runs = load_historical_runs()
+    
+    # Also check if there's a current results file and add it as the most recent run
+    current_results = load_current_results()
+    if current_results:
+        print(f"🔍 Found current results with {len(current_results)} entries - adding as most recent run")
+        # Add current results as the most recent historical run
+        current_run_id = current_results[0].get('run_id', 'current')
+        current_timestamp = current_results[0].get('timestamp', 0)
+        
+        # Insert current run at the beginning (most recent)
+        available_runs.insert(0, {
+            'run_id': current_run_id,
+            'timestamp': current_timestamp,
+            'total': len(current_results),
+            'success': len([r for r in current_results if r.get('status') == 'success']),
+            'failed': len([r for r in current_results if r.get('status') in ['build_fail', 'test_fail', 'timeout']]),
+            'results': current_results
+        })
+        print(f"✅ Added current run {current_run_id} as most recent historical run")
+    else:
+        print("ℹ️ No current results found - using historical data only")
 
-    # Generate HTML
-    html = generate_dashboard_html(current_results, available_runs)
+    print(f"📊 Total runs available: {len(available_runs)}")
+
+    # Generate HTML (no need to separate current vs historical)
+    html = generate_dashboard_html(available_runs)
 
     # Write HTML file
     with open('./dashboard.html', 'w') as f:
         f.write(html)
 
-    print(f"✅ Generated dynamic dashboard with {len(current_results)} results")
-    print(f"📊 Dashboard includes {len(available_runs)} historical runs")
+    print(f"✅ Generated dynamic dashboard with {len(available_runs)} total runs")
     print(f"📁 Output: ./dashboard.html")
 
 

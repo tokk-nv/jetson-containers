@@ -32,34 +32,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download current sweep results and logs
+      - name: Download current and historical sweep results
         env:
           DASHBOARD_PAT: ${{ secrets.DASHBOARD_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CURRENT_RUN_ID: ${{ github.event.workflow_run.id }}
           CURRENT_SHA: ${{ github.event.workflow_run.head_sha }}
           CURRENT_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
           REPO: NVIDIA-AI-IOT/jetson-containers
-        run: |
-          echo "🔍 Attempting to download current run artifacts..."
-          echo "   Matrix workflow conclusion: ${{ github.event.workflow_run.conclusion }}"
-          echo "   Matrix workflow status: ${{ github.event.workflow_run.status }}"
-
-          # Try to download current run artifacts, but don't fail if they don't exist
-          if python3 .github/workflows/scripts/dashboard_download_current_artifacts.py; then
-            echo "✅ Successfully downloaded current run artifacts"
-          else
-            echo "⚠️ Failed to download current run artifacts (workflow may have been cancelled)"
-            echo "   This is expected when the Build Matrix workflow is cancelled"
-            echo "   Dashboard will continue with historical data only"
-          fi
-
-      - name: Download recent sweep results (with PAT support)
-        env:
-          DASHBOARD_PAT: ${{ secrets.DASHBOARD_PAT }}
-          REPO: NVIDIA-AI-IOT/jetson-containers
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_ACTOR: ${{ github.actor }}
         run: |
+          echo "🔍 Downloading current and historical sweep results..."
+          echo "   Matrix workflow conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo "   Matrix workflow status: ${{ github.event.workflow_run.status }}"
+
           # Test secret access first
           if [ -n "$DASHBOARD_PAT" ]; then
             echo "✅ DASHBOARD_PAT is accessible (length: ${#DASHBOARD_PAT})"
@@ -68,67 +55,42 @@ jobs:
           fi
           echo ""
 
-          python3 .github/workflows/scripts/dashboard_download_historical_runs.py
-
-      - name: Check if results.json exists and has data
-        id: check-results
-        run: |
-          if [ -f "./results-data/results.json" ]; then
-            # Check if the file has actual data (not just empty array)
-            result_count=$(jq 'length' ./results-data/results.json 2>/dev/null || echo "0")
-            if [ "$result_count" -gt 0 ]; then
-              echo "exists=true" >> $GITHUB_OUTPUT
-              echo "has_data=true" >> $GITHUB_OUTPUT
-              echo "Current results file found with $result_count entries"
-            else
-              echo "exists=true" >> $GITHUB_OUTPUT
-              echo "has_data=false" >> $GITHUB_OUTPUT
-              echo "Current results file found but empty (cancelled workflow)"
-            fi
+          # Try to download current run artifacts first
+          echo "📥 Attempting to download current run artifacts..."
+          if python3 .github/workflows/scripts/dashboard_download_current_artifacts.py; then
+            echo "✅ Successfully downloaded current run artifacts"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "has_data=false" >> $GITHUB_OUTPUT
-            echo "No current results file found"
+            echo "⚠️ No current run artifacts available (workflow may have been cancelled)"
+            echo "   This is expected when the Build Matrix workflow is cancelled"
           fi
 
+          # Download historical runs (this will include current run if available)
+          echo "📥 Downloading historical runs..."
+          python3 .github/workflows/scripts/dashboard_download_historical_runs.py
+
       - name: Download and process log files
-        if: steps.check-results.outputs.exists == 'true'
         env:
           DASHBOARD_PAT: ${{ secrets.DASHBOARD_PAT }}
           REPO: NVIDIA-AI-IOT/jetson-containers
         run: |
-          if [ "${{ steps.check-results.outputs.has_data }}" = "true" ]; then
-            echo "📊 Processing log files for current run data..."
-            python3 .github/workflows/scripts/dashboard_process_log_files.py
-          else
-            echo "⚠️ Skipping log processing - no current run data (cancelled workflow)"
-            echo "   Dashboard will show historical data only"
-          fi
+          echo "📊 Processing log files..."
+          python3 .github/workflows/scripts/dashboard_process_log_files.py
 
       - name: Convert logs to HTML
-        if: steps.check-results.outputs.exists == 'true'
         run: |
-          if [ "${{ steps.check-results.outputs.has_data }}" = "true" ]; then
-            echo "🔄 Converting log files to HTML for better web viewing..."
-            python3 .github/workflows/scripts/log_to_html_converter.py ./logs/
-            echo "✅ Log conversion completed"
-          else
-            echo "⚠️ Skipping log conversion - no current run data (cancelled workflow)"
-          fi
+          echo "🔄 Converting log files to HTML for better web viewing..."
+          python3 .github/workflows/scripts/log_to_html_converter.py ./logs/
+          echo "✅ Log conversion completed"
 
       - name: Generate dashboard HTML
-        if: steps.check-results.outputs.exists == 'true'
         run: |
           echo "🔄 Generating dashboard HTML..."
-          echo "   Current run data: ${{ steps.check-results.outputs.has_data }}"
-          echo "   Historical data will be included regardless"
+          echo "   Dashboard will work with any combination of current and historical data"
           python3 .github/workflows/scripts/dashboard_generate_html.py
 
       - name: Generate markdown report
-        if: steps.check-results.outputs.exists == 'true'
         run: |
           echo "🔄 Generating markdown report..."
-          echo "   Current run data: ${{ steps.check-results.outputs.has_data }}"
           python3 .github/workflows/scripts/dashboard_generate_report.py
 
       - name: Setup Pages
@@ -227,12 +189,8 @@ jobs:
             echo "✅ Successfully deployed to GitHub Pages!"
             echo "Dashboard URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
 
-            # Show what type of dashboard was deployed
-            if [ "${{ steps.check-results.outputs.has_data }}" = "true" ]; then
-              echo "📊 Deployed dashboard with current run data"
-            else
-              echo "📊 Deployed fallback dashboard (Build Matrix was cancelled)"
-            fi
+            # Show deployment status
+            echo "📊 Dashboard deployed successfully with all available data"
           else
             echo "⚠️ Pages deployment failed"
             echo "Check the deploy step above for error details"
@@ -245,105 +203,6 @@ jobs:
           name: build-report-${{ github.event.workflow_run.head_sha }}
           path: build-report.md
           retention-days: 30
-
-      - name: Create fallback dashboard (if no current results)
-        if: steps.check-results.outputs.exists == 'false' || steps.check-results.outputs.has_data == 'false'
-        run: |
-          echo "🔄 Creating fallback dashboard with historical data only..."
-
-          # Ensure results-data directory exists
-          mkdir -p ./results-data
-
-          # Create empty results.json if it doesn't exist
-          if [ ! -f "./results-data/results.json" ]; then
-            echo "[]" > ./results-data/results.json
-            echo "✅ Created empty results.json for fallback"
-          fi
-
-          # Create basic dashboard HTML
-          cat > dashboard.html << 'EOF'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Jetson Containers Build Dashboard</title>
-              <style>
-                  body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
-                  .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-                  .header { text-align: center; margin-bottom: 30px; }
-                  .status { padding: 20px; margin: 20px 0; border-radius: 5px; }
-                  .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
-                  .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
-                  .footer { text-align: center; margin-top: 30px; color: #666; }
-              </style>
-          </head>
-          <body>
-              <div class="container">
-                  <div class="header">
-                      <h1>🚀 Jetson Containers Build Dashboard</h1>
-                      <p>Build Matrix Status: <strong>Cancelled</strong></p>
-                  </div>
-
-                  <div class="status warning">
-                      <h3>⚠️ Build Matrix Workflow Cancelled</h3>
-                      <p>The Build Matrix workflow was cancelled, so no current build results are available.</p>
-                      <p>This dashboard shows historical data only. Check the workflow logs for details about why the build was cancelled.</p>
-                  </div>
-
-                  <div class="status info">
-                      <h3>📊 Historical Data</h3>
-                      <p>Historical build data from previous successful runs is available below.</p>
-                      <p>This helps track build trends and identify patterns over time.</p>
-                  </div>
-
-                  <div id="historical-data">
-                      <h3>📈 Recent Build History</h3>
-                      <p>Loading historical data...</p>
-                  </div>
-
-                  <div class="footer">
-                      <p>Dashboard generated on: <span id="timestamp"></span></p>
-                      <p>Last updated: <span id="last-updated"></span></p>
-                  </div>
-              </div>
-
-              <script>
-                  document.getElementById('timestamp').textContent = new Date().toLocaleString();
-                  document.getElementById('last-updated').textContent = new Date().toLocaleString();
-              </script>
-          </body>
-          </html>
-          EOF
-
-          echo "✅ Created fallback dashboard HTML"
-
-          # Create basic markdown report
-          cat > build-report.md << 'EOF'
-          # Jetson Containers Build Report
-
-          ## Status: Build Matrix Cancelled
-
-          The Build Matrix workflow was cancelled, so no current build results are available.
-
-          ### What happened?
-          - The Build Matrix workflow was cancelled before completion
-          - No build artifacts were generated
-          - This dashboard shows historical data only
-
-          ### Next Steps
-          1. Check the Build Matrix workflow logs to understand why it was cancelled
-          2. Review resource availability and timeout settings
-          3. Consider re-running the workflow if needed
-
-          ### Historical Data
-          Historical build data from previous runs is available in the dashboard.
-
-          ---
-          *Report generated on: $(date)*
-          EOF
-
-          echo "✅ Created fallback markdown report"
 
       - name: Comment on PR (if applicable)
         if: false  # Temporarily disabled due to null pointer error - will re-enable after merge to main
