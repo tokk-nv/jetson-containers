@@ -637,7 +637,7 @@ jobs:
         env:
           RUNNER_LABEL: ${{ matrix.platform }}
           INDEX_HOST: ${{ env.INDEX_HOST }}
-          PKG_TIMEOUT_MIN: ${{ github.event.inputs.pkg_timeout_minutes || '30' }}
+          PKG_TIMEOUT_MIN: ${{ github.event.inputs.pkg_timeout_minutes || '120' }}
         run: |
           mkdir -p logs
 
@@ -655,12 +655,21 @@ jobs:
           repo = os.environ["GITHUB_REPOSITORY"]
           run_id = os.environ["GITHUB_RUN_ID"]
           attempt = os.environ["GITHUB_RUN_ATTEMPT"]
-          pkg_timeout_min = int(os.environ.get("PKG_TIMEOUT_MIN", "30") or "30")
+          pkg_timeout_min = int(os.environ.get("PKG_TIMEOUT_MIN", "120") or "120")
           pkg_timeout_s = pkg_timeout_min * 60  # Per-package timeout as specified by user
           # Overall chunk timeout (allow more time for multiple packages)
           chunk_timeout_s = max(3600, pkg_timeout_min * 60 * 3)  # At least 1 hour, or 3x per-package timeout
+
+          print(f"⏰ Timeout settings:")
+          print(f"  - Per-package timeout: {pkg_timeout_min} minutes ({pkg_timeout_s} seconds)")
+          print(f"  - Chunk timeout: {chunk_timeout_s // 60} minutes ({chunk_timeout_s} seconds)")
+          print(f"  - Total packages: {len(pkgs)}")
           results = []
           total = len(pkgs)
+
+          # Create initial empty results.json file
+          pathlib.Path("results.json").write_text(json.dumps([], indent=2))
+          print("📝 Created initial empty results.json file")
 
           def check_memory():
             try:
@@ -846,6 +855,10 @@ jobs:
               mem_available = check_memory()
               if mem_available is not None:
                 print(f"[build] Memory after {pkg}: {mem_available}MB available")
+
+              # Save results incrementally after each package
+              pathlib.Path("results.json").write_text(json.dumps(results, indent=2))
+              print(f"💾 Saved {len(results)} results to results.json")
 
             name, tag = (pkg.split(":", 1) + ["latest"])[:2] if ":" in pkg else (pkg, "latest")
 
@@ -1113,6 +1126,12 @@ jobs:
           fi
           echo "Rows: $(jq 'length' results.json)"
           
+          # Ensure results.json is valid JSON even if empty
+          if ! jq empty results.json 2>/dev/null; then
+            echo "⚠️ results.json is invalid JSON, creating empty array"
+            echo "[]" > results.json
+          fi
+
           # Ensure results.json is valid JSON even if empty
           if ! jq empty results.json 2>/dev/null; then
             echo "⚠️ results.json is invalid JSON, creating empty array"
