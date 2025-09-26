@@ -33,12 +33,12 @@ def setup_authentication(dashboard_pat: Optional[str], github_token: Optional[st
     if not token:
         print("❌ No authentication token available")
         sys.exit(1)
-    
+
     print(f"🔍 Token debugging for current run download:")
     print(f"   DASHBOARD_PAT exists: {dashboard_pat is not None}")
     print(f"   GITHUB_TOKEN exists: {github_token is not None}")
     print(f"   Using token: {'DASHBOARD_PAT' if dashboard_pat else 'GITHUB_TOKEN'}")
-    
+
     return {'Authorization': f'token {token}'}
 
 
@@ -52,7 +52,7 @@ def download_artifact(artifact: Dict[str, Any], headers: Dict[str, str], repo: s
     """Download a single artifact."""
     download_url = f"https://api.github.com/repos/{repo}/actions/artifacts/{artifact['id']}/zip"
     response = requests.get(download_url, headers=headers)
-    
+
     if response.status_code == 200:
         return response.content
     else:
@@ -64,14 +64,14 @@ def process_merged_results_artifact(artifact: Dict[str, Any], headers: Dict[str,
     """Process the merged results artifact."""
     print(f"    📥 Downloading merged results...")
     content = download_artifact(artifact, headers, repo)
-    
+
     if content:
         with open('./results-data/results.zip', 'wb') as f:
             f.write(content)
-        
+
         with zipfile.ZipFile('./results-data/results.zip', 'r') as zip_ref:
             zip_ref.extractall('./results-data')
-        
+
         os.remove('./results-data/results.zip')
         print(f"    ✅ Merged results downloaded")
 
@@ -80,23 +80,23 @@ def process_chunk_artifact(artifact: Dict[str, Any], headers: Dict[str, str], re
     """Process a chunk artifact containing logs."""
     print(f"    📥 Downloading chunk artifact with logs...")
     content = download_artifact(artifact, headers, repo)
-    
+
     if not content:
         return
-    
+
     # Extract platform info from artifact name
     # Format: results-{platform}-chunk-{index}-{attempt}
     parts = artifact['name'].split('-')
     platform = parts[1] if len(parts) > 1 else 'unknown'
     chunk_index = parts[3] if len(parts) > 3 else '000'
-    
+
     artifact_path = f'./temp-{artifact["id"]}.zip'
     with open(artifact_path, 'wb') as f:
         f.write(content)
-    
+
     with zipfile.ZipFile(artifact_path, 'r') as zip_ref:
         zip_ref.extractall(f'./temp-{artifact["id"]}')
-    
+
     # Move log files with unique names
     temp_dir = f'./temp-{artifact["id"]}'
     for root, dirs, files in os.walk(temp_dir):
@@ -109,7 +109,7 @@ def process_chunk_artifact(artifact: Dict[str, Any], headers: Dict[str, str], re
                 dst = os.path.join('./logs/run-current', unique_name)
                 print(f"    📝 Moving log: {file} -> {unique_name}")
                 shutil.move(src, dst)
-    
+
     # Clean up
     os.remove(artifact_path)
     shutil.rmtree(temp_dir)
@@ -121,19 +121,19 @@ def move_logs_to_main_directory():
     if not os.path.exists('./logs/run-current'):
         print(f"  ℹ️ No run-current directory found")
         return
-    
+
     run_current_logs = os.listdir('./logs/run-current')
     if not run_current_logs:
         print(f"  ℹ️ No log files in run-current directory")
         return
-    
+
     print(f"📝 Moving {len(run_current_logs)} log files from run-current to main logs directory...")
     for log_file in run_current_logs:
         src = os.path.join('./logs/run-current', log_file)
         dst = os.path.join('./logs', log_file)
         shutil.move(src, dst)
         print(f"  Moved: {log_file}")
-    
+
     # Remove empty run-current directory
     os.rmdir('./logs/run-current')
     print(f"✅ Log files moved successfully")
@@ -142,12 +142,12 @@ def move_logs_to_main_directory():
 def print_summary():
     """Print summary of downloaded files."""
     print(f"\n📁 Downloaded files:")
-    
+
     if os.path.exists('./results-data/results.json'):
         print(f"  ✅ ./results-data/results.json")
     else:
         print(f"  ❌ ./results-data/results.json missing")
-    
+
     if os.path.exists('./logs'):
         log_files = [f for f in os.listdir('./logs') if f.endswith('.log')]
         print(f"  📝 Log files ({len(log_files)}):")
@@ -161,38 +161,61 @@ def main():
     """Main function to download current run artifacts."""
     env_vars = get_environment_variables()
     headers = setup_authentication(env_vars['dashboard_pat'], env_vars['github_token'])
-    
+
     print(f"🔍 Downloading artifacts from current run {env_vars['current_run_id']}")
     print(f"   SHA: {env_vars['current_sha']}, Attempt: {env_vars['current_attempt']}")
-    
+
     # Get all artifacts from current run
     artifacts_url = f"https://api.github.com/repos/{env_vars['repo']}/actions/runs/{env_vars['current_run_id']}/artifacts"
     response = requests.get(artifacts_url, headers=headers)
-    
+
     if response.status_code != 200:
         print(f"❌ Failed to get artifacts: {response.status_code}")
-        sys.exit(1)
-    
+        print(f"   This may happen if the Build Matrix workflow was cancelled")
+        print(f"   Creating empty results structure for dashboard fallback")
+        create_directories()
+        # Create empty results.json for fallback
+        with open('./results-data/results.json', 'w') as f:
+            json.dump([], f)
+        print(f"✅ Created empty results.json for fallback")
+        return
+
     artifacts = response.json().get('artifacts', [])
     print(f"📋 Found {len(artifacts)} total artifacts for current run:")
-    
+
     create_directories()
-    
+
+    merged_results_found = False
+    chunk_artifacts_found = 0
+
     for artifact in artifacts:
         print(f"  - {artifact['name']} ({artifact['size_in_bytes']} bytes)")
-        
+
         # Download final merged results
         if artifact['name'] == f"sweep-results-{env_vars['current_sha']}-{env_vars['current_attempt']}":
             process_merged_results_artifact(artifact, headers, env_vars['repo'])
-        
+            merged_results_found = True
+
         # Download chunk artifacts (contain logs)
-        elif (artifact['name'].startswith('results-') and 
-              '-chunk-' in artifact['name'] and 
+        elif (artifact['name'].startswith('results-') and
+              '-chunk-' in artifact['name'] and
               artifact['name'].endswith(f"-{env_vars['current_attempt']}")):
             process_chunk_artifact(artifact, headers, env_vars['repo'])
-    
+            chunk_artifacts_found += 1
+
+    # If no merged results were found, create empty results.json for fallback
+    if not merged_results_found:
+        print(f"⚠️ No merged results artifact found for current run")
+        print(f"   This is expected when the Build Matrix workflow is cancelled")
+        print(f"   Creating empty results.json for dashboard fallback")
+        with open('./results-data/results.json', 'w') as f:
+            json.dump([], f)
+        print(f"✅ Created empty results.json for fallback")
+
     print(f"✅ Current run artifact download complete")
-    
+    print(f"   - Merged results: {'✅ Found' if merged_results_found else '❌ Not found (cancelled workflow)'}")
+    print(f"   - Chunk artifacts: {chunk_artifacts_found} found")
+
     move_logs_to_main_directory()
     print_summary()
 

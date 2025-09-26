@@ -113,7 +113,7 @@ def download_historical_runs(headers: Dict[str, str], repo: str) -> List[Dict[st
 
     repo_runs = response.json().get('workflow_runs', [])
     completed_runs = [r for r in repo_runs if r['conclusion'] in ['success', 'failure', 'cancelled']]
-    runs = completed_runs[:20]  # Process up to 20 recent runs
+    runs = completed_runs[:25]  # Process up to 25 recent runs
 
     print(f"\n🎯 Found workflow runs in: {repo}")
     print(f"📊 Will process {len(runs)} recent runs for timeline")

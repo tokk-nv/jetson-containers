@@ -1092,6 +1092,7 @@ jobs:
         with:
           path: _in
           pattern: results-*-chunk-*-${{ github.run_attempt }}
+        continue-on-error: true
 
       - name: Debug downloaded artifacts
         run: |
@@ -1115,31 +1116,69 @@ jobs:
       - name: Merge JSON
         run: |
           sudo apt-get update && sudo apt-get install -y jq
-          mapfile -t files < <(find _in -type f -name results.json | sort)
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "[]" > results.json
-            echo "⚠️ No chunk artifacts found - creating empty results.json"
-          else
-            # Merge all available results, even if some chunks failed
-            jq -s '[.[]] | add' "${files[@]}" > results.json
-            echo "✅ Successfully merged ${#files[@]} chunk artifacts"
-          fi
-          echo "Rows: $(jq 'length' results.json)"
 
-          # Debug: Show content of each results.json file
-          echo "🔍 Debugging individual results.json files:"
-          for file in "${files[@]}"; do
-            echo "File: $file"
-            echo "Size: $(wc -c < "$file") bytes"
-            echo "Content: $(cat "$file")"
-            echo "---"
-          done
+          # Ensure _in directory exists
+          mkdir -p _in
+
+          # Find all results.json files from chunk artifacts
+          mapfile -t files < <(find _in -type f -name results.json | sort)
+
+          echo "🔍 Found ${#files[@]} results.json files to merge"
+
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "⚠️ No chunk artifacts found - creating empty results.json"
+            echo "   This can happen if all chunks timeout or fail before uploading artifacts"
+            echo "[]" > results.json
+          else
+            echo "📊 Merging results from ${#files[@]} chunk artifacts..."
+
+            # Debug: Show content of each results.json file
+            echo "🔍 Debugging individual results.json files:"
+            for file in "${files[@]}"; do
+              echo "File: $file"
+              echo "Size: $(wc -c < "$file") bytes"
+              if [ -s "$file" ]; then
+                echo "Content preview: $(head -c 200 "$file")..."
+              else
+                echo "Content: (empty file)"
+              fi
+              echo "---"
+            done
+
+            # Merge all available results, even if some chunks failed
+            if jq -s '[.[]] | add' "${files[@]}" > results.json; then
+              echo "✅ Successfully merged ${#files[@]} chunk artifacts"
+            else
+              echo "⚠️ Failed to merge JSON files, creating empty results.json"
+              echo "[]" > results.json
+            fi
+          fi
 
           # Ensure results.json is valid JSON even if empty
           if ! jq empty results.json 2>/dev/null; then
             echo "⚠️ results.json is invalid JSON, creating empty array"
             echo "[]" > results.json
           fi
+
+          echo "📊 Final results.json: $(jq 'length' results.json) entries"
+
+      - name: Ensure results.json exists
+        if: always()
+        run: |
+          # This step ensures results.json always exists, even if previous steps failed
+          if [ ! -f "results.json" ]; then
+            echo "⚠️ results.json missing - creating empty fallback"
+            echo "[]" > results.json
+          fi
+
+          # Validate JSON format
+          if ! jq empty results.json 2>/dev/null; then
+            echo "⚠️ results.json is invalid - creating empty fallback"
+            echo "[]" > results.json
+          fi
+
+          echo "✅ results.json guaranteed to exist and be valid"
+          echo "📊 Final count: $(jq 'length' results.json) entries"
 
       - name: Publish summary (first 50 rows)
         run: |
@@ -1152,6 +1191,7 @@ jobs:
           echo "_Full data uploaded as artifact \`sweep-results-${GITHUB_SHA}-${GITHUB_RUN_ATTEMPT}\`._" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload merged results.json
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: sweep-results-${{ github.sha }}-${{ github.run_attempt }}
@@ -1176,10 +1216,19 @@ jobs:
           if [ -f "results.json" ]; then
             echo "  - Results file: ✅ Present"
             echo "  - Total entries: $(jq 'length' results.json)"
+
+            # Show what type of results we have
+            if [ "$(jq 'length' results.json)" -eq 0 ]; then
+              echo "  - Status: ⚠️ Empty results (all chunks may have timed out/failed)"
+              echo "  - This is expected when all build chunks timeout or fail"
+            else
+              echo "  - Status: ✅ Contains build results"
+            fi
           else
-            echo "  - Results file: ❌ Missing"
+            echo "  - Results file: ❌ Missing (this should not happen)"
           fi
           echo "🎯 This job always succeeds to ensure workflow completion"
+          echo "📋 Dashboard will be generated with available data"
 
 # ────────────────────────────────────────────────────────────────────────────────
 # 5) FINAL: Always succeeds to ensure workflow completion
