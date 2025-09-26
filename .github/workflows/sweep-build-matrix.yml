@@ -1126,24 +1126,15 @@ jobs:
           fi
           echo "Rows: $(jq 'length' results.json)"
           
-          # Ensure results.json is valid JSON even if empty
-          if ! jq empty results.json 2>/dev/null; then
-            echo "⚠️ results.json is invalid JSON, creating empty array"
-            echo "[]" > results.json
-          fi
-
-          # Ensure results.json is valid JSON even if empty
-          if ! jq empty results.json 2>/dev/null; then
-            echo "⚠️ results.json is invalid JSON, creating empty array"
-            echo "[]" > results.json
-          fi
-
-          # Ensure results.json is valid JSON even if empty
-          if ! jq empty results.json 2>/dev/null; then
-            echo "⚠️ results.json is invalid JSON, creating empty array"
-            echo "[]" > results.json
-          fi
-
+          # Debug: Show content of each results.json file
+          echo "🔍 Debugging individual results.json files:"
+          for file in "${files[@]}"; do
+            echo "File: $file"
+            echo "Size: $(wc -c < "$file") bytes"
+            echo "Content: $(cat "$file")"
+            echo "---"
+          done
+          
           # Ensure results.json is valid JSON even if empty
           if ! jq empty results.json 2>/dev/null; then
             echo "⚠️ results.json is invalid JSON, creating empty array"
