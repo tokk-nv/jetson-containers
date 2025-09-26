@@ -33,49 +33,49 @@ def setup_authentication(dashboard_pat: Optional[str], github_token: Optional[st
     if not token:
         print("❌ No authentication token available")
         sys.exit(1)
-    
+
     print(f"🔍 Token debugging:")
     print(f"   DASHBOARD_PAT exists: {dashboard_pat is not None}")
     print(f"   GITHUB_TOKEN exists: {github_token is not None}")
     print(f"   Using token: {'DASHBOARD_PAT' if dashboard_pat else 'GITHUB_TOKEN'}")
     print(f"   Token length: {len(token)}")
     print(f"   Token prefix: {token[:10]}..." if token else "No token")
-    
+
     return {'Authorization': f'token {token}'}
 
 
 def test_repository_access(headers: Dict[str, str], repo: str) -> bool:
     """Test access to a repository and its workflows."""
     print(f"\n🧪 Testing access to repository: {repo}")
-    
+
     # Test basic repo access
     repo_url = f'https://api.github.com/repos/{repo}'
     repo_response = requests.get(repo_url, headers=headers)
     print(f"   Repository access: {repo_response.status_code}")
-    
+
     if repo_response.status_code != 200:
         return False
-    
+
     # Test workflow file access
     workflow_url = f'https://api.github.com/repos/{repo}/actions/workflows/sweep-build-matrix.yml'
     workflow_response = requests.get(workflow_url, headers=headers)
     print(f"   Workflow file access: {workflow_response.status_code}")
-    
+
     # Test workflow runs
     url = f'https://api.github.com/repos/{repo}/actions/workflows/sweep-build-matrix.yml/runs'
-    params = {'per_page': 15}  # Fetch more runs for better historical timeline
-    
+    params = {'per_page': 25}  # Fetch more runs for better historical timeline
+
     print(f"   Testing workflow runs API...")
     print(f"   URL: {url}")
     print(f"   Params: {params}")
-    
+
     response = requests.get(url, headers=headers, params=params)
     print(f"   Workflow runs status: {response.status_code}")
-    
+
     if response.status_code == 200:
         repo_runs = response.json().get('workflow_runs', [])
         print(f"   ✅ Success! Found {len(repo_runs)} total workflow runs")
-        
+
         if len(repo_runs) > 0:
             # Show run details
             print(f"   📊 Recent runs:")
@@ -83,7 +83,7 @@ def test_repository_access(headers: Dict[str, str], repo: str) -> bool:
                 status = run['conclusion'] or run['status']
                 created_at = datetime.fromisoformat(run['created_at'].replace('Z', '+00:00'))
                 print(f"     {i+1}. Run {run['id']} - {status} - {created_at.strftime('%Y-%m-%d %H:%M')} UTC")
-            
+
             # Filter completed runs
             completed_runs = [r for r in repo_runs if r['conclusion'] in ['success', 'failure']]
             return len(completed_runs) > 0
@@ -103,66 +103,66 @@ def test_repository_access(headers: Dict[str, str], repo: str) -> bool:
 def download_historical_runs(headers: Dict[str, str], repo: str) -> List[Dict[str, Any]]:
     """Download recent workflow runs and their artifacts."""
     url = f'https://api.github.com/repos/{repo}/actions/workflows/sweep-build-matrix.yml/runs'
-    params = {'per_page': 15}
-    
+    params = {'per_page': 25}
+
     response = requests.get(url, headers=headers, params=params)
-    
+
     if response.status_code != 200:
         print(f"❌ Failed to get workflow runs: {response.status_code}")
         return []
-    
+
     repo_runs = response.json().get('workflow_runs', [])
-    completed_runs = [r for r in repo_runs if r['conclusion'] in ['success', 'failure']]
-    runs = completed_runs[:10]  # Process up to 10 recent runs
-    
+    completed_runs = [r for r in repo_runs if r['conclusion'] in ['success', 'failure', 'cancelled']]
+    runs = completed_runs[:20]  # Process up to 20 recent runs
+
     print(f"\n🎯 Found workflow runs in: {repo}")
     print(f"📊 Will process {len(runs)} recent runs for timeline")
-    
+
     # Create runs directory and process runs
     os.makedirs('./runs', exist_ok=True)
-    
+
     for i, run in enumerate(runs):
         run_id = run['id']
         sha = run['head_sha']
         created_at = run['created_at']
         conclusion = run['conclusion']
-        
+
         print(f"\nProcessing run {i+1}: {run_id} (SHA: {sha[:8]}, Status: {conclusion})")
-        
+
         # Get artifacts for this run
         artifacts_url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/artifacts'
         artifacts_response = requests.get(artifacts_url, headers=headers)
-        
+
         if artifacts_response.status_code != 200:
             print(f"  ❌ Failed to get artifacts: {artifacts_response.status_code}")
             continue
-        
+
         artifacts = artifacts_response.json().get('artifacts', [])
-        
+
         # Find sweep results artifact
         sweep_artifact = None
         for artifact in artifacts:
             if artifact['name'].startswith('sweep-results-'):
                 sweep_artifact = artifact
                 break
-        
+
         if sweep_artifact:
             print(f"  Found sweep results artifact: {sweep_artifact['name']}")
-            
+
             # Download artifact
             download_url = f"https://api.github.com/repos/{repo}/actions/artifacts/{sweep_artifact['id']}/zip"
             download_response = requests.get(download_url, headers=headers)
-            
+
             if download_response.status_code == 200:
                 # Save artifact zip
                 artifact_path = f'./runs/run-{run_id}.zip'
                 with open(artifact_path, 'wb') as f:
                     f.write(download_response.content)
-                
+
                 # Extract zip
                 with zipfile.ZipFile(artifact_path, 'r') as zip_ref:
                     zip_ref.extractall(f'./runs/run-{run_id}')
-                
+
                 # Move results.json to a standardized location
                 results_src = f'./runs/run-{run_id}/results.json'
                 if os.path.exists(results_src):
@@ -171,7 +171,7 @@ def download_historical_runs(headers: Dict[str, str], repo: str) -> List[Dict[st
                     print(f"  ✅ Saved results-{run_id}.json")
                 else:
                     print(f"  ❌ No results.json found in artifact")
-                
+
                 # Clean up zip file and extracted directory
                 os.remove(artifact_path)
                 if os.path.exists(f'./runs/run-{run_id}'):
@@ -180,7 +180,7 @@ def download_historical_runs(headers: Dict[str, str], repo: str) -> List[Dict[st
                 print(f"  ❌ Failed to download artifact: {download_response.status_code}")
         else:
             print(f"  ❌ No sweep results artifact found")
-    
+
     return runs
 
 
@@ -197,28 +197,28 @@ def print_fallback_message():
 def main():
     """Main function to download historical runs."""
     env_vars = get_environment_variables()
-    
+
     print("🔍 Testing cross-repository access for historical runs...")
     print(f"   Current repository: {env_vars.get('current_repo', 'unknown')}")
     print(f"   Triggered by: {env_vars.get('github_event_name', 'unknown')}")
     print(f"   Repository: {env_vars['current_repo']}")
     print(f"   Event: {env_vars.get('github_event_name', 'unknown')}")
     print(f"   Actor: {env_vars.get('github_actor', 'unknown')}")
-    
+
     headers = setup_authentication(env_vars['dashboard_pat'], env_vars['github_token'])
-    
+
     # Focus on upstream since that's where workflows run
     possible_repos = [
         'NVIDIA-AI-IOT/jetson-containers',  # Upstream repo where workflows run
     ]
-    
+
     print(f"\n🔍 Will test access to repositories:")
     for repo in possible_repos:
         print(f"  - {repo}")
-    
+
     successful_repo = None
     runs = []
-    
+
     for repo in possible_repos:
         if test_repository_access(headers, repo):
             # Test successful, try to get runs
@@ -230,7 +230,7 @@ def main():
             except Exception as e:
                 print(f"   ❌ Error downloading runs: {e}")
                 continue
-    
+
     if not successful_repo:
         print(f"\n❌ Could not access historical workflow runs from any repository")
         print(f"💡 This is likely due to:")
@@ -238,12 +238,12 @@ def main():
         print(f"   2. Cross-repository access limitations")
         print(f"   3. Workflow runs not found or expired")
         print_fallback_message()
-        
+
         # Create empty runs directory
         os.makedirs('./runs', exist_ok=True)
     else:
         print(f"\n✅ Successfully downloaded {len(runs)} historical runs from {successful_repo}")
-    
+
     print(f"\nCompleted repository access test")
 
 
