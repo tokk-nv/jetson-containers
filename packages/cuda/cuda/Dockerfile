@@ -55,7 +55,7 @@ ENV PATH="${PATH}:${CUDA_HOME}/bin" \
 # Create symbolic links so that libcuda.so and libcuda.so.1 point to the CUDA stub libraries.
 # This allows linking against CUDA when the actual driver libraries are not available at build time.
 # The '-f' flag forces overwrite if the link or file already exists, and '|| true' prevents the build from failing if linking fails.
-RUN ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/libcuda.so || true \
- && ln -sf /usr/local/cuda/lib64/stubs/libcuda.so.1 /usr/local/cuda/lib64/libcuda.so.1 || true
+#RUN ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/libcuda.so || true \
+# && ln -sf /usr/local/cuda/lib64/stubs/libcuda.so.1 /usr/local/cuda/lib64/libcuda.so.1 || true
 
 WORKDIR /
