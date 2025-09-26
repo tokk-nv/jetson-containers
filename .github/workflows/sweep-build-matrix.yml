@@ -1126,9 +1126,20 @@ jobs:
           echo "🔍 Found ${#files[@]} results.json files to merge"
 
           if [ "${#files[@]}" -eq 0 ]; then
-            echo "⚠️ No chunk artifacts found - creating empty results.json"
+            echo "⚠️ No chunk artifacts found - creating meaningful results.json with plan data"
             echo "   This can happen if all chunks timeout or fail before uploading artifacts"
-            echo "[]" > results.json
+
+            # Download plan artifacts to get package information
+            echo "📥 Downloading plan artifacts to create meaningful results..."
+            if [ -d "_plans" ]; then
+              echo "   Plan artifacts already available"
+            else
+              # Download plan artifacts
+              gh run download ${{ github.run_id }} --dir _plans --pattern "plan-*" || echo "   Could not download plan artifacts"
+            fi
+
+            # Create meaningful results.json with plan data
+            python3 .github/workflows/scripts/create_meaningful_results.py
           else
             echo "📊 Merging results from ${#files[@]} chunk artifacts..."
 

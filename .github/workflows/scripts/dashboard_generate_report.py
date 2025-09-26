@@ -104,10 +104,10 @@ def generate_markdown_report(results: List[Dict[str, Any]]) -> str:
 
 | Status | Count | Percentage |
 |--------|-------|------------|
-| ✅ Success | {stats['success']} | {stats['success']/stats['total']*100:.1f}% |
-| ❌ Failed | {stats['failed']} | {stats['failed']/stats['total']*100:.1f}% |
-| ⏰ Timeout | {stats['timeout']} | {stats['timeout']/stats['total']*100:.1f}% |
-| 💥 OOM Killed | {stats['oom']} | {stats['oom']/stats['total']*100:.1f}% |
+| ✅ Success | {stats['success']} | {(stats['success']/stats['total']*100) if stats['total'] > 0 else 0:.1f}% |
+| ❌ Failed | {stats['failed']} | {(stats['failed']/stats['total']*100) if stats['total'] > 0 else 0:.1f}% |
+| ⏰ Timeout | {stats['timeout']} | {(stats['timeout']/stats['total']*100) if stats['total'] > 0 else 0:.1f}% |
+| 💥 OOM Killed | {stats['oom']} | {(stats['oom']/stats['total']*100) if stats['total'] > 0 else 0:.1f}% |
 | **Total** | **{stats['total']}** | **100.0%** |
 
 **Overall Success Rate:** {stats['success_rate']:.1f}%
@@ -123,10 +123,10 @@ def generate_markdown_report(results: List[Dict[str, Any]]) -> str:
 
 | Status | Count | Percentage |
 |--------|-------|------------|
-| ✅ Success | {platform_stats['success']} | {platform_stats['success']/platform_stats['total']*100:.1f}% |
-| ❌ Failed | {platform_stats['failed']} | {platform_stats['failed']/platform_stats['total']*100:.1f}% |
-| ⏰ Timeout | {platform_stats['timeout']} | {platform_stats['timeout']/platform_stats['total']*100:.1f}% |
-| 💥 OOM Killed | {platform_stats['oom']} | {platform_stats['oom']/platform_stats['total']*100:.1f}% |
+| ✅ Success | {platform_stats['success']} | {(platform_stats['success']/platform_stats['total']*100) if platform_stats['total'] > 0 else 0:.1f}% |
+| ❌ Failed | {platform_stats['failed']} | {(platform_stats['failed']/platform_stats['total']*100) if platform_stats['total'] > 0 else 0:.1f}% |
+| ⏰ Timeout | {platform_stats['timeout']} | {(platform_stats['timeout']/platform_stats['total']*100) if platform_stats['total'] > 0 else 0:.1f}% |
+| 💥 OOM Killed | {platform_stats['oom']} | {(platform_stats['oom']/platform_stats['total']*100) if platform_stats['total'] > 0 else 0:.1f}% |
 | **Total** | **{platform_stats['total']}** | **100.0%** |
 
 **Success Rate:** {platform_success_rate:.1f}%
@@ -160,8 +160,9 @@ def main():
     # Load results
     results = load_results()
     if not results:
-        print("❌ No results available - cannot generate report")
-        sys.exit(1)
+        print("⚠️ No results available - generating empty report")
+        # Create empty results for fallback
+        results = []
 
     print(f"📊 Processing {len(results)} build results...")
 

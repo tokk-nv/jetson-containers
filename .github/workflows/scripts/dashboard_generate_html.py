@@ -58,18 +58,9 @@ def load_historical_runs() -> List[Dict[str, Any]]:
                 })
                 print(f"✅ Loaded run {run_id} with {len(run_data)} results")
             else:
-                # Run has no data (cancelled jobs) - create placeholder entry
-                available_runs.append({
-                    'run_id': run_id,
-                    'sha': 'unknown',
-                    'timestamp': os.path.getmtime(os.path.join(runs_dir, filename)),
-                    'total': 0,
-                    'success': 0,
-                    'failed': 0,
-                    'timeout': 0,
-                    'oom': 0
-                })
-                print(f"✅ Loaded run {run_id} with 0 results (cancelled job)")
+                # Skip empty files - they don't provide meaningful data for the dashboard
+                print(f"⚠️ Skipping run {run_id} - no meaningful data (empty file)")
+                continue
         except Exception as e:
             print(f"Error loading {filename}: {e}")
 
@@ -916,19 +907,19 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
         function initializeTimestamps() {{
             // Update all timeline popup dates
             document.querySelectorAll('.popup-date[data-timestamp]').forEach(element => {{
-                const timestamp = parseInt(element.getAttribute('data-timestamp'));
+                const timestamp = parseFloat(element.getAttribute('data-timestamp'));
                 element.textContent = formatTimelineDate(timestamp);
             }});
 
             // Update all timestamp displays
             document.querySelectorAll('.timestamp-display[data-timestamp]').forEach(element => {{
-                const timestamp = parseInt(element.getAttribute('data-timestamp'));
+                const timestamp = parseFloat(element.getAttribute('data-timestamp'));
                 element.textContent = formatTimestamp(timestamp);
             }});
 
             // Update run selector options with local times
             document.querySelectorAll('#run-select option[data-timestamp]').forEach(option => {{
-                const timestamp = parseInt(option.getAttribute('data-timestamp'));
+                const timestamp = parseFloat(option.getAttribute('data-timestamp'));
                 const runId = option.value;
                 option.textContent = `Run ${{runId}}${{formatRunOptionDate(timestamp)}}`;
             }});
@@ -1251,7 +1242,7 @@ def main():
 
     # Load all historical runs (including current one if it exists)
     available_runs = load_historical_runs()
-    
+
     # Also check if there's a current results file and add it as the most recent run
     current_results = load_current_results()
     if current_results:
@@ -1259,7 +1250,7 @@ def main():
         # Add current results as the most recent historical run
         current_run_id = current_results[0].get('run_id', 'current')
         current_timestamp = current_results[0].get('timestamp', 0)
-        
+
         # Insert current run at the beginning (most recent)
         available_runs.insert(0, {
             'run_id': current_run_id,
