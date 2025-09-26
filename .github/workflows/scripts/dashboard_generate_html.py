@@ -1224,8 +1224,9 @@ def main():
     # Load data
     current_results = load_current_results()
     if not current_results:
-        print("❌ No current results available - cannot generate dashboard")
-        sys.exit(1)
+        print("⚠️ No current results available - generating dashboard with empty results")
+        print("ℹ️ This may indicate all build jobs were cancelled due to timeouts")
+        # Continue with empty results instead of exiting
 
     available_runs = load_historical_runs()
 

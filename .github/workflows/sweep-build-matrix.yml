@@ -1125,7 +1125,7 @@ jobs:
             echo "✅ Successfully merged ${#files[@]} chunk artifacts"
           fi
           echo "Rows: $(jq 'length' results.json)"
-          
+
           # Debug: Show content of each results.json file
           echo "🔍 Debugging individual results.json files:"
           for file in "${files[@]}"; do
@@ -1134,7 +1134,7 @@ jobs:
             echo "Content: $(cat "$file")"
             echo "---"
           done
-          
+
           # Ensure results.json is valid JSON even if empty
           if ! jq empty results.json 2>/dev/null; then
             echo "⚠️ results.json is invalid JSON, creating empty array"
