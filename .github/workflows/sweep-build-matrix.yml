@@ -1050,26 +1050,6 @@ jobs:
           echo "Checking logs directory:"
           ls -la logs/ || echo "logs directory not found"
 
-      - name: Debug files before upload
-        if: always()
-        run: |
-          echo "🔍 Debugging files before upload:"
-          echo "Current directory: $(pwd)"
-          echo "Files in current directory:"
-          ls -la
-          echo ""
-          echo "Checking for results.json:"
-          if [ -f "results.json" ]; then
-            echo "✅ results.json exists ($(wc -c < results.json) bytes)"
-            echo "First few lines:"
-            head -n 5 results.json
-          else
-            echo "❌ results.json does not exist"
-          fi
-          echo ""
-          echo "Checking logs directory:"
-          ls -la logs/ || echo "logs directory not found"
-
       - name: Upload chunk results & logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -1133,6 +1113,12 @@ jobs:
           fi
           echo "Rows: $(jq 'length' results.json)"
           
+          # Ensure results.json is valid JSON even if empty
+          if ! jq empty results.json 2>/dev/null; then
+            echo "⚠️ results.json is invalid JSON, creating empty array"
+            echo "[]" > results.json
+          fi
+
           # Ensure results.json is valid JSON even if empty
           if ! jq empty results.json 2>/dev/null; then
             echo "⚠️ results.json is invalid JSON, creating empty array"
