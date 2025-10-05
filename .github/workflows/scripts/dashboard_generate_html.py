@@ -12,18 +12,11 @@ import json
 from datetime import datetime
 from typing import List, Dict, Any
 
+# Configuration constants
+TIMELINE_RUNS_LIMIT = 25  # Number of runs to show in timeline
+MIN_MARKER_SPACING = 3.0  # Minimum spacing between timeline markers in percentage
 
-def load_current_results() -> List[Dict[str, Any]]:
-    """Load current build results."""
-    try:
-        with open('./results-data/results.json', 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print("❌ No current results found at ./results-data/results.json")
-        return []
-    except json.JSONDecodeError as e:
-        print(f"❌ Error parsing results.json: {e}")
-        return []
+
 
 
 def load_historical_runs() -> List[Dict[str, Any]]:
@@ -53,8 +46,10 @@ def load_historical_runs() -> List[Dict[str, Any]]:
                     'total': len(run_data),
                     'success': sum(1 for r in run_data if r['status'] == 'success'),
                     'failed': sum(1 for r in run_data if r['status'] == 'build_fail'),
+                    'started': sum(1 for r in run_data if r['status'] == 'started'),
                     'timeout': sum(1 for r in run_data if r['status'] == 'timeout'),
-                    'oom': sum(1 for r in run_data if r['status'] == 'oom_killed')
+                    'oom': sum(1 for r in run_data if r['status'] == 'oom_killed'),
+                    'results': run_data  # Include the actual results data
                 })
                 print(f"✅ Loaded run {run_id} with {len(run_data)} results")
             else:
@@ -64,7 +59,8 @@ def load_historical_runs() -> List[Dict[str, Any]]:
         except Exception as e:
             print(f"Error loading {filename}: {e}")
 
-    # Sort runs by timestamp (newest first)
+
+    # Sort runs by timestamp (newest first) - this will ensure current run is first
     available_runs.sort(key=lambda x: x['timestamp'], reverse=True)
 
     print(f"✅ Found {len(available_runs)} available runs for timeline")
@@ -99,27 +95,34 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
     # Generate timeline items for available runs (mathematical axis approach)
     timeline_items = []
 
-    # Calculate positions for timeline markers based on actual time differences
+    # Calculate positions for timeline markers chronologically (oldest to newest)
     if available_runs:
-        # Use all run timestamps for range calculation
-        all_timestamps = [run["timestamp"] for run in available_runs]
+        # Sort runs chronologically for timeline display (oldest first)
+        timeline_runs = sorted(available_runs[:TIMELINE_RUNS_LIMIT], key=lambda x: x['timestamp'])
 
+        # Use all run timestamps for range calculation
+        all_timestamps = [run["timestamp"] for run in timeline_runs]
         oldest_timestamp = min(all_timestamps)
         newest_timestamp = max(all_timestamps)
         time_range = newest_timestamp - oldest_timestamp if newest_timestamp != oldest_timestamp else 86400  # Default to 1 day if same
 
         print(f"🕐 Timeline range: {time_range/86400:.1f} days ({oldest_timestamp} to {newest_timestamp})")
+        print(f"📊 Timeline order: {[r['run_id'] for r in timeline_runs]} (oldest to newest)")
 
-        for i, run in enumerate(available_runs[:25]):  # Show up to 25 runs instead of 10
-            # Calculate position percentage based on actual time difference
-            # Map to 10% - 90% range to leave more space before oldest and after latest
-            if time_range > 0:
+        # Calculate simple proportional positions (oldest=10%, newest=90%)
+        positions = []
+        if time_range > 0:
+            for run in timeline_runs:
                 time_ratio = (run["timestamp"] - oldest_timestamp) / time_range
                 position_percent = 10 + (time_ratio * 80)  # 10% to 90% range
-            else:
-                # Fallback to equal spacing if timestamps are identical
-                position_percent = 10 + (i * (80 / len(available_runs[:25])))
+                positions.append(position_percent)
+        else:
+            # Fallback to equal spacing if timestamps are identical
+            positions = [10 + (i * (80 / len(timeline_runs))) for i in range(len(timeline_runs))]
 
+        for i, run in enumerate(timeline_runs):
+            position_percent = positions[i]
+            time_ratio = (run["timestamp"] - oldest_timestamp) / time_range if time_range > 0 else i / len(timeline_runs)
             print(f"   📍 Run {run['run_id']}: {time_ratio:.3f} ratio → {position_percent:.1f}% position")
 
             # Determine build health status
@@ -147,8 +150,8 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                     health_color = "#dc3545"  # Red
                     health_label = "Major Issues"
 
-            # Check if this is the most recent run (first in the sorted list)
-            is_latest = (i == 0)
+            # Check if this is the most recent run (last in chronologically sorted list)
+            is_latest = (run["timestamp"] == newest_timestamp)
             marker_class = f"timeline-marker {'latest-run' if is_latest else ''}"
 
             timeline_item = f'''
@@ -171,8 +174,9 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                             <div class="stat-breakdown">
                                 <span class="success-count">{run["success"]} ✅</span>
                                 <span class="failed-count">{run["failed"]} ❌</span>
-                                {f'<span class="timeout-count">{run["timeout"]} ⏱️</span>' if run["timeout"] > 0 else ''}
-                                {f'<span class="oom-count">{run["oom"]} 💥</span>' if run["oom"] > 0 else ''}
+                                {f'<span class="started-count">{run.get("started", 0)} 🔄</span>' if run.get("started", 0) > 0 else ''}
+                                {f'<span class="timeout-count">{run.get("timeout", 0)} ⏱️</span>' if run.get("timeout", 0) > 0 else ''}
+                                {f'<span class="oom-count">{run.get("oom", 0)} 💥</span>' if run.get("oom", 0) > 0 else ''}
                             </div>
                         </div>
                     </div>
@@ -198,6 +202,9 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jetson Containers Build Dashboard</title>
+    <!-- Chart.js for enhanced timeline visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -752,19 +759,26 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
 
         <div class="timeline" id="timeline">
             <div style="font-weight: bold; margin-bottom: 15px; color: #495057;">📊 Recent Runs Timeline:</div>
-            <div class="timeline-axis-container">
+
+            <!-- Enhanced Chart.js Timeline -->
+            <div class="chart-container" style="position: relative; height: 300px; width: 100%; min-width: 1000px; margin: 20px 0; overflow-x: auto;">
+                <canvas id="timelineChart" style="min-width: 1000px;"></canvas>
+            </div>
+
+            <!-- Fallback: Original timeline for compatibility -->
+            <div class="timeline-axis-container" id="fallback-timeline" style="display: none;">
                 <div class="timeline-axis">
                     <div class="axis-line"></div>
                     <div class="axis-labels">
                         <span class="axis-label-left">Oldest</span>
                         <span class="axis-label-right">Latest</span>
                     </div>
-                    <!-- Current run marker removed - latest historical run is highlighted instead -->
                     {timeline_html}
                 </div>
             </div>
+
             <div style="color: #6c757d; font-size: 12px; margin-top: 15px;">
-                💡 Hover over markers to see details • Click to view results • Timeline shows last 10 runs
+                💡 Click on bars to view run details • Hover for statistics • Timeline shows last {TIMELINE_RUNS_LIMIT} runs
             </div>
         </div>
 
@@ -921,7 +935,9 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
             document.querySelectorAll('#run-select option[data-timestamp]').forEach(option => {{
                 const timestamp = parseFloat(option.getAttribute('data-timestamp'));
                 const runId = option.value;
-                option.textContent = `Run ${{runId}}${{formatRunOptionDate(timestamp)}}`;
+                const isSelected = option.hasAttribute('selected');
+                const emoji = isSelected ? ' 🆕' : '';
+                option.textContent = `Run ${{runId}}${{formatRunOptionDate(timestamp)}}${{emoji}}`;
             }});
 
             // Update current run info
@@ -930,6 +946,228 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
 
         // Available runs data
         const availableRuns = {json.dumps(available_runs, separators=(',', ':'))};
+
+        // Chart.js timeline chart
+        let timelineChart = null;
+
+        function initializeTimelineChart() {{
+            // Check if Chart.js is loaded
+            if (typeof Chart === 'undefined') {{
+                throw new Error('Chart.js is not loaded');
+            }}
+
+            console.log('Chart.js version:', Chart.version);
+            console.log('Available runs for chart:', availableRuns.length);
+
+            const ctx = document.getElementById('timelineChart').getContext('2d');
+            console.log('Chart container width:', ctx.canvas.clientWidth);
+            console.log('Chart container height:', ctx.canvas.clientHeight);
+
+            // Prepare data for Chart.js - back to time scale for proportional positioning
+            const chartData = availableRuns.slice(0, {TIMELINE_RUNS_LIMIT}).map(run => {{
+                const date = new Date(run.timestamp * 1000);
+                return {{
+                    x: date,  // Use actual date for proportional positioning
+                    runId: run.run_id,
+                    success: run.success,
+                    failed: run.failed,
+                    timeout: run.timeout || 0,
+                    oom: run.oom || 0,
+                    started: run.started || 0,
+                    total: run.total,
+                    sha: run.sha
+                }};
+            }});
+
+            // Sort chronologically (oldest to newest for proper display)
+            chartData.sort((a, b) => a.x - b.x);
+
+            timelineChart = new Chart(ctx, {{
+                type: 'bar',
+                data: {{
+                    datasets: [
+                        {{
+                            label: 'Success',
+                            data: chartData.map(d => ({{ x: d.x, y: d.success, runData: d }})),
+                            backgroundColor: '#28a745',
+                            borderColor: '#1e7e34',
+                            borderWidth: 1,
+                            stack: 'builds'
+                        }},
+                        {{
+                            label: 'Failed',
+                            data: chartData.map(d => ({{ x: d.x, y: d.failed, runData: d }})),
+                            backgroundColor: '#dc3545',
+                            borderColor: '#c82333',
+                            borderWidth: 1,
+                            stack: 'builds'
+                        }},
+                        {{
+                            label: 'Timeout',
+                            data: chartData.map(d => ({{ x: d.x, y: d.timeout, runData: d }})),
+                            backgroundColor: '#ffc107',
+                            borderColor: '#e0a800',
+                            borderWidth: 1,
+                            stack: 'builds'
+                        }},
+                        {{
+                            label: 'OOM',
+                            data: chartData.map(d => ({{ x: d.x, y: d.oom, runData: d }})),
+                            backgroundColor: '#fd7e14',
+                            borderColor: '#e8650e',
+                            borderWidth: 1,
+                            stack: 'builds'
+                        }},
+                        {{
+                            label: 'Started',
+                            data: chartData.map(d => ({{ x: d.x, y: d.started, runData: d }})),
+                            backgroundColor: '#6c757d',
+                            borderColor: '#5a6268',
+                            borderWidth: 1,
+                            stack: 'builds'
+                        }}
+                    ]
+                }},
+                options: {{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {{
+                        mode: 'index',
+                        intersect: false
+                    }},
+                    elements: {{
+                        bar: {{
+                            barThickness: 80,      // Very thick bars - 80px
+                            maxBarThickness: 100,  // Maximum thickness
+                            minBarLength: 2        // Minimum bar length for visibility
+                        }}
+                    }},
+                    plugins: {{
+                        title: {{
+                            display: false
+                        }},
+                        legend: {{
+                            display: true,
+                            position: 'top',
+                            labels: {{
+                                usePointStyle: true,
+                                padding: 20
+                            }}
+                        }},
+                        tooltip: {{
+                            position: 'nearest',  // Use nearest positioning
+                            xAlign: function(tooltipItem) {{
+                                // Position tooltip to the right for left-side bars, left for right-side bars
+                                const chart = tooltipItem.chart;
+                                const dataPoint = tooltipItem.tooltip.dataPoints[0];
+                                const barX = dataPoint.element.x;
+                                const chartWidth = chart.width;
+
+                                // If bar is in left half, show tooltip on right
+                                if (barX < chartWidth / 2) {{
+                                    return 'left';  // Tooltip appears to the right of the bar
+                                }} else {{
+                                    return 'right'; // Tooltip appears to the left of the bar
+                                }}
+                            }},
+                            yAlign: 'center',     // Center vertically with the bar
+                            caretPadding: 10,     // Add some space between tooltip and bar
+                            callbacks: {{
+                                title: function(context) {{
+                                    const runData = context[0].raw.runData;
+                                    return `Run ${{runData.runId}} - ${{runData.x.toLocaleDateString()}} ${{runData.x.toLocaleTimeString()}}`;
+                                }},
+                                afterTitle: function(context) {{
+                                    const runData = context[0].raw.runData;
+                                    return `SHA: ${{runData.sha.substring(0, 8)}}`;
+                                }},
+                                label: function(context) {{
+                                    const runData = context.raw.runData;
+                                    const total = runData.total;
+                                    const successRate = total > 0 ? ((runData.success / total) * 100).toFixed(1) : '0.0';
+
+                                    return [
+                                        `${{context.dataset.label}}: ${{context.parsed.y}}`,
+                                        `Total Packages: ${{total}}`,
+                                        `Success Rate: ${{successRate}}%`
+                                    ];
+                                }}
+                            }}
+                        }}
+                    }},
+                    scales: {{
+                        x: {{
+                            type: 'time',  // Back to time scale for proportional positioning
+                            time: {{
+                                unit: 'day',  // Use day units for cleaner display
+                                displayFormats: {{
+                                    day: 'MMM dd'
+                                }}
+                            }},
+                            scaleLabel: {{
+                                display: true,
+                                labelString: 'Date'
+                            }},
+                            offset: true,  // Add offset to give bars more space
+                            barPercentage: 1.0,  // Use 100% of available space for bars
+                            categoryPercentage: 1.0  // Use 100% of category space
+                        }},
+                        y: {{
+                            stacked: true,
+                            beginAtZero: true,
+                            scaleLabel: {{
+                                display: true,
+                                labelString: 'Package Count'
+                            }}
+                        }}
+                    }},
+                    onClick: function(event, elements) {{
+                        if (elements.length > 0) {{
+                            const element = elements[0];
+                            let runData = null;
+
+                            // Try different ways to access the data based on Chart.js version
+                            if (element.element && element.element.$context && element.element.$context.raw && element.element.$context.raw.runData) {{
+                                runData = element.element.$context.raw.runData;
+                            }} else if (element._model && element._model.runData) {{
+                                runData = element._model.runData;
+                            }} else if (element.element && element.element.runData) {{
+                                runData = element.element.runData;
+                            }} else {{
+                                // Fallback: get data from the dataset
+                                const datasetIndex = element.datasetIndex;
+                                const index = element.index;
+                                const dataset = timelineChart.data.datasets[datasetIndex];
+                                if (dataset && dataset.data[index] && dataset.data[index].runData) {{
+                                    runData = dataset.data[index].runData;
+                                }}
+                            }}
+
+                            if (runData && runData.runId) {{
+                                const runId = runData.runId;
+                                console.log('Clicked on run:', runId);
+
+                                // Switch to the selected run
+                                document.getElementById('run-select').value = runId;
+                                currentRun = runId;
+                                loadResults(runId);
+                                updateTimelineSelection(runId);
+                            }} else {{
+                                console.warn('Could not find run data for clicked element:', element);
+                            }}
+                        }}
+                    }}
+                }}
+            }});
+
+            // Debug: Log chart configuration after creation
+            console.log('Chart created with config:');
+            console.log('- Bar thickness setting:', timelineChart.options.elements.bar.barThickness);
+            console.log('- Max bar thickness:', timelineChart.options.elements.bar.maxBarThickness);
+            console.log('- Scale type:', timelineChart.options.scales.x.type);
+            console.log('- Number of data points:', chartData.length);
+            console.log('- Time range (days):', (chartData[chartData.length-1].x - chartData[0].x) / (1000 * 60 * 60 * 24));
+        }}
 
         // Load and parse the JSON data
         async function loadResults(runId = 'current') {{
@@ -940,7 +1178,13 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
 
                 let response;
                 if (runId === 'current') {{
-                    response = await fetch('results.json');
+                    // For 'current', load the first (newest) run
+                    const newestRun = availableRuns[0];
+                    if (newestRun) {{
+                        response = await fetch('runs/results-' + newestRun.run_id + '.json');
+                    }} else {{
+                        throw new Error('No runs available');
+                    }}
                 }} else {{
                     response = await fetch('runs/results-' + runId + '.json');
                 }}
@@ -955,6 +1199,7 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
 
                 updateStats();
                 populateRunnerFilter();
+                sortResults();  // Apply default sort (by package) on load
                 renderTable();
                 updateRunInfo(runId);
 
@@ -1224,6 +1469,17 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
         // Initialize
         setupEventListeners();
         initializeTimestamps();
+
+        // Initialize Chart.js timeline with delay to ensure scripts are loaded
+        setTimeout(() => {{
+            try {{
+                initializeTimelineChart();
+            }} catch (error) {{
+                console.warn('Chart.js timeline failed to initialize, falling back to original timeline:', error);
+                document.getElementById('fallback-timeline').style.display = 'block';
+            }}
+        }}, 100);
+
         // Load the pre-selected run (first option with 'selected' attribute)
         const selectedOption = document.querySelector('#run-select option[selected]');
         const initialRun = selectedOption ? selectedOption.value : document.getElementById('run-select').value;
@@ -1240,33 +1496,16 @@ def main():
     """Main function to generate dashboard HTML."""
     print("🎨 Generating interactive HTML dashboard...")
 
-    # Load all historical runs (including current one if it exists)
+    # Load all runs from the runs directory (everything is treated as historical)
     available_runs = load_historical_runs()
 
-    # Also check if there's a current results file and add it as the most recent run
-    current_results = load_current_results()
-    if current_results:
-        print(f"🔍 Found current results with {len(current_results)} entries - adding as most recent run")
-        # Add current results as the most recent historical run
-        current_run_id = current_results[0].get('run_id', 'current')
-        current_timestamp = current_results[0].get('timestamp', 0)
-
-        # Insert current run at the beginning (most recent)
-        available_runs.insert(0, {
-            'run_id': current_run_id,
-            'timestamp': current_timestamp,
-            'total': len(current_results),
-            'success': len([r for r in current_results if r.get('status') == 'success']),
-            'failed': len([r for r in current_results if r.get('status') in ['build_fail', 'test_fail', 'timeout']]),
-            'results': current_results
-        })
-        print(f"✅ Added current run {current_run_id} as most recent historical run")
-    else:
-        print("ℹ️ No current results found - using historical data only")
+    if not available_runs:
+        print("❌ No runs found - cannot generate dashboard")
+        return
 
     print(f"📊 Total runs available: {len(available_runs)}")
 
-    # Generate HTML (no need to separate current vs historical)
+    # Generate HTML
     html = generate_dashboard_html(available_runs)
 
     # Write HTML file

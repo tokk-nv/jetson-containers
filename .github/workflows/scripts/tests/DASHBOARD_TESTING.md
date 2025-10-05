@@ -40,16 +40,16 @@ python3 .github/workflows/scripts/tests/test_dashboard_local.py --token ghp_your
 
 ```
 dashboard-test/
-├── index.html              # Main dashboard (open this in browser!)
-├── report.md               # Markdown summary report
-├── results-data/
-│   └── results.json        # Current build results
+├── dashboard.html          # Main dashboard (open this in browser!)
+├── dashboard-generation.log # Full generation log for debugging
+├── build-report.md         # Markdown summary report
 ├── runs/
-│   ├── results-*.json      # Historical run data
+│   ├── results-*.json      # All run data (unified approach)
 │   └── ...
 └── logs/
-    ├── *.log              # Raw log files
-    ├── *.html             # Enhanced HTML logs
+    ├── run-*/             # Organized by run ID
+    │   ├── *.log          # Raw log files
+    │   └── *.html         # Enhanced HTML logs with ANSI colors
     └── ...
 ```
 
@@ -58,13 +58,13 @@ dashboard-test/
 1. **Environment Setup**: Creates test directory structure
 2. **Data Fetching**: Uses your PAT to pull from `nvidia-ai-iot/jetson-containers`
 3. **Script Execution**: Runs our local dashboard scripts:
-   - `dashboard_download_current_artifacts.py`
-   - `dashboard_download_historical_runs.py`
-   - `dashboard_process_log_files.py`
-   - `log_to_html_converter.py`
-   - `dashboard_generate_html.py`
-   - `dashboard_generate_report.py`
-4. **Output Generation**: Creates complete dashboard with new timeline
+   - `dashboard_download_historical_runs.py` (with pagination & chunk merging)
+   - `dashboard_process_log_files.py` (with pagination support)
+   - `log_to_html_converter.py` (ANSI color conversion)
+   - `dashboard_generate_html.py` (Chart.js timeline + auto-sort)
+   - `dashboard_generate_report.py` (unified data loading)
+4. **Output Generation**: Creates complete dashboard with Chart.js timeline
+5. **Comprehensive Logging**: All output saved to `dashboard-generation.log`
 
 ## 🎨 Testing Timeline Features
 
@@ -100,15 +100,42 @@ dashboard-test/
 - Dashboard will still work with current run only
 - Check if `runs/` directory has `results-*.json` files
 
+## 🐛 Debugging with Generation Logs
+
+The test script now saves **all output** to `dashboard-generation.log` for debugging:
+
+```bash
+# View the full log
+cat ./dashboard-test/dashboard-generation.log
+
+# Search for specific run
+grep "18254053839" ./dashboard-test/dashboard-generation.log
+
+# Check pagination details
+grep "📄 Page" ./dashboard-test/dashboard-generation.log
+
+# See chunk merging progress
+grep "chunk" ./dashboard-test/dashboard-generation.log
+```
+
+**What's in the log:**
+- Artifact pagination (pages fetched, counts)
+- Chunk artifact merging details
+- Package counts per run
+- API response status codes
+- Error messages and warnings
+
 ## 🎯 What to Look For
 
-When testing the new timeline design:
+When testing the dashboard:
 
-1. **Positioning**: Markers should be positioned chronologically along the axis
-2. **Colors**: Health status colors should reflect actual success rates
-3. **Interactivity**: Smooth hover effects and clickable functionality
-4. **Data Accuracy**: Popup stats should match the actual build results
-5. **Responsiveness**: Timeline should work on different screen sizes
+1. **Timeline Positioning**: Markers positioned chronologically with proper spacing
+2. **Run Selection**: All runs appear in dropdown (check pagination worked)
+3. **Package Count**: Verify runs show correct package counts (e.g., run 18254053839 should have 481 packages)
+4. **Alphabetical Sorting**: Packages automatically sorted A-Z on load
+5. **Colors**: Health status colors reflect actual success rates
+6. **Interactivity**: Smooth hover effects and clickable timeline markers
+7. **Chunk Merging**: Incomplete runs (without sweep-results artifact) still display results
 
 ## 🚀 Next Steps
 

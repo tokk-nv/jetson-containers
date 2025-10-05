@@ -13,16 +13,50 @@ from datetime import datetime
 from typing import List, Dict, Any
 
 
-def load_results() -> List[Dict[str, Any]]:
-    """Load build results."""
-    try:
-        with open('./results-data/results.json', 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print("❌ No results found at ./results-data/results.json")
+def load_results(run_id: str = None) -> List[Dict[str, Any]]:
+    """Load build results from a specific run or the latest run."""
+    runs_dir = './runs'
+
+    if not os.path.exists(runs_dir):
+        print(f"❌ No runs directory found at {runs_dir}")
         return []
+
+    # If specific run ID provided, load that run
+    if run_id:
+        results_file = os.path.join(runs_dir, f'results-{run_id}.json')
+        try:
+            with open(results_file, 'r') as f:
+                results = json.load(f)
+                print(f"✅ Loaded results for run {run_id}")
+                return results
+        except FileNotFoundError:
+            print(f"❌ No results found for run {run_id} at {results_file}")
+            return []
+        except json.JSONDecodeError as e:
+            print(f"❌ Error parsing {results_file}: {e}")
+            return []
+
+    # Otherwise, load the most recent run
+    results_files = sorted([f for f in os.listdir(runs_dir) if f.startswith('results-') and f.endswith('.json')])
+
+    if not results_files:
+        print(f"❌ No results files found in {runs_dir}")
+        return []
+
+    # Sort by modification time to get the latest
+    results_files_with_time = [(f, os.path.getmtime(os.path.join(runs_dir, f))) for f in results_files]
+    results_files_with_time.sort(key=lambda x: x[1], reverse=True)
+    latest_file = results_files_with_time[0][0]
+    latest_run_id = latest_file.replace('results-', '').replace('.json', '')
+
+    try:
+        results_path = os.path.join(runs_dir, latest_file)
+        with open(results_path, 'r') as f:
+            results = json.load(f)
+            print(f"✅ Loaded latest run: {latest_run_id} ({len(results)} results)")
+            return results
     except json.JSONDecodeError as e:
-        print(f"❌ Error parsing results.json: {e}")
+        print(f"❌ Error parsing {latest_file}: {e}")
         return []
 
 
@@ -153,12 +187,17 @@ def generate_markdown_report(results: List[Dict[str, Any]]) -> str:
     return md
 
 
-def main():
+def main(run_id: str = None):
     """Main function to generate markdown report."""
     print("📋 Generating markdown build report...")
 
-    # Load results
-    results = load_results()
+    # Load results from specific run or latest run
+    if run_id:
+        print(f"🎯 Generating report for run: {run_id}")
+    else:
+        print("🎯 Generating report for latest run")
+
+    results = load_results(run_id)
     if not results:
         print("⚠️ No results available - generating empty report")
         # Create empty results for fallback

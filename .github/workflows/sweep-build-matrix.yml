@@ -14,9 +14,9 @@ on:
         required: false
         default: "list"
       subset_value:
-        description: 'Value for subset (e.g., "a" | "^opencv" | "apex,arrow" | "10")'
+        description: 'Value for subset (e.g., "a" | "^opencv" | "apex,arrow" | "10"). Leave blank when using "all" mode.'
         required: false
-        default: "build-essential"
+        default: ""
       exclude_builders:
         description: "Exclude *-builder tags? true/false"
         required: false
@@ -26,13 +26,17 @@ on:
         required: false
         default: "false"
       chunk_size:
-        description: 'Packages per job; set "auto" to size from target_jobs_per_platform'
+        description: 'Packages per job; set "auto" to size from target_chunks_small'
         required: false
         default: "auto"
-      target_jobs_per_platform:
-        description: "Target total jobs per platform (used when chunk_size=auto)"
+      target_chunks_small:
+        description: "Target number of chunks for small workloads (≤100 packages) to utilize available runners"
         required: false
-        default: "60"
+        default: "20"
+      max_packages_per_chunk:
+        description: "Maximum packages per chunk for large workloads (>100 packages)"
+        required: false
+        default: "5"
       max_parallel:
         description: "Max parallel jobs across ALL platforms"
         required: false
@@ -113,7 +117,8 @@ jobs:
           echo "exclude_builders='${{ github.event.inputs.exclude_builders || 'true' }}'"
           echo "use_cache='${{ github.event.inputs.use_cache || 'false' }}'"
           echo "chunk_size='${{ github.event.inputs.chunk_size || 'auto' }}'"
-          echo "target_jobs_per_platform='${{ github.event.inputs.target_jobs_per_platform || '60' }}'"
+          echo "target_chunks_small='${{ github.event.inputs.target_chunks_small || '20' }}'"
+          echo "max_packages_per_chunk='${{ github.event.inputs.max_packages_per_chunk || '5' }}'"
           echo "max_parallel='${{ github.event.inputs.max_parallel || '32' }}'"
           echo "pkg_timeout_minutes='${{ github.event.inputs.pkg_timeout_minutes || '30' }}'"
           echo "resolved_platforms=${{ steps.set.outputs.platforms }}"
@@ -126,7 +131,8 @@ jobs:
           echo "- **exclude_builders**: '${{ github.event.inputs.exclude_builders || 'true' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **use_cache**: '${{ github.event.inputs.use_cache || 'false' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **chunk_size**: '${{ github.event.inputs.chunk_size || 'auto' }}'" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **target_jobs_per_platform**: '${{ github.event.inputs.target_jobs_per_platform || '60' }}'" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **target_chunks_small**: '${{ github.event.inputs.target_chunks_small || '20' }}'" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **max_packages_per_chunk**: '${{ github.event.inputs.max_packages_per_chunk || '5' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **max_parallel**: '${{ github.event.inputs.max_parallel || '32' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **pkg_timeout_minutes**: '${{ github.event.inputs.pkg_timeout_minutes || '30' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **platforms (resolved)**: ${{ steps.set.outputs.platforms }}" >> "$GITHUB_STEP_SUMMARY"
@@ -172,15 +178,102 @@ jobs:
           fetch-depth: 1
           clean: false
 
-      - name: One-time setup (first checkout only)
-        id: first-time-setup
+      - name: Bulletproof environment setup
+        id: bulletproof-setup
         run: |
-          MARKER="${{ github.workspace }}/.ci_setup_done"
-          if [[ ! -f "$MARKER" ]]; then
-            echo "Running first-time setup (install.sh)..."
-            bash ./install.sh
-            touch "$MARKER"
+          echo "=== 🛡️ BULLETPROOF ENVIRONMENT SETUP ==="
+          echo "Ubuntu version: $(lsb_release -rs)"
+          echo "Python version: $(python3 --version)"
+          echo "Workspace: ${{ github.workspace }}"
+          echo "Current directory: $(pwd)"
+
+          # Step 1: Ensure system pip is available as fallback
+          echo "🔧 Step 1: Ensuring system pip availability..."
+          if ! python3 -m pip --version >/dev/null 2>&1; then
+            echo "⚠️ System pip not available, installing..."
+            sudo apt-get update -qq
+            sudo apt-get install -y python3-pip
+            echo "✅ System pip installed"
+          else
+            echo "✅ System pip already available"
           fi
+
+          # Step 2: Run install.sh if needed (creates venv on Ubuntu 24.04)
+          MARKER="${{ github.workspace }}/.ci_setup_done"
+          echo "🔧 Step 2: Running jetson-containers setup..."
+          echo "Marker file: $MARKER"
+          echo "Marker exists: $([ -f "$MARKER" ] && echo 'YES' || echo 'NO')"
+
+          if [[ ! -f "$MARKER" ]]; then
+            echo "Running install.sh for the first time..."
+            echo "=== install.sh output ==="
+
+            # On Ubuntu 24.04, install.sh creates a venv which is crucial
+            if bash ./install.sh 2>&1 | tee install_output.log; then
+              touch "$MARKER"
+              echo "✅ install.sh completed successfully, created marker file"
+
+              # Check if venv was created (Ubuntu 24.04)
+              if [ -d "venv" ]; then
+                echo "✅ Virtual environment created at ./venv/"
+              fi
+            else
+              echo "⚠️ install.sh failed, but continuing with system pip fallback"
+              echo "📋 This might be expected on Ubuntu 24.04 if dependencies are missing"
+            fi
+          else
+            echo "✅ Setup already completed (marker file exists)"
+          fi
+
+          # Step 3: Activate virtual environment if it exists (Ubuntu 24.04+)
+          if [ -d "venv" ] && [ -f "venv/bin/activate" ]; then
+            echo "🔧 Step 3: Activating virtual environment..."
+            source venv/bin/activate
+            echo "✅ Virtual environment activated"
+            echo "  - Updated Python path: $(which python3)"
+            echo "  - Updated pip: $(python3 -m pip --version 2>&1 || echo 'pip not available in venv')"
+          else
+            echo "🔧 Step 3: No virtual environment found, using system Python"
+          fi
+
+          # Step 4: Ensure pip is available (fallback to system if venv fails)
+          echo "🔧 Step 4: Ensuring pip availability..."
+          if ! python3 -m pip --version >/dev/null 2>&1; then
+            echo "⚠️ Pip not available, installing system pip as fallback..."
+            sudo apt-get update -qq
+            sudo apt-get install -y python3-pip
+            echo "✅ System pip installed as fallback"
+          else
+            echo "✅ Pip is available"
+          fi
+
+          # Step 5: Install missing required modules if needed
+          echo "🔧 Step 5: Ensuring required modules are available..."
+
+          # Check if we're in an externally managed environment (Ubuntu 24.04+)
+          UBUNTU_VERSION=$(lsb_release -rs)
+          IN_VENV=$(python3 -c "import sys; print(sys.prefix != sys.base_prefix)" 2>/dev/null || echo "False")
+
+          echo "🔍 Environment check:"
+          echo "  - Ubuntu version: $UBUNTU_VERSION"
+          echo "  - In virtual environment: $IN_VENV"
+
+          if [[ "$UBUNTU_VERSION" == "24.04" ]] && [[ "$IN_VENV" == "False" ]]; then
+            echo "⚠️ Ubuntu 24.04 detected with externally managed environment (not in venv)"
+            echo "🔧 Using --break-system-packages to install required modules"
+            PIP_INSTALL_FLAGS="--break-system-packages --quiet"
+          else
+            echo "✅ Safe to install packages normally"
+            PIP_INSTALL_FLAGS="--quiet"
+          fi
+
+          # Step 6: Final verification
+          echo "🧪 Step 6: Final environment verification..."
+          python3 -c "import sys; print('✅ Python working')" || echo "❌ Python not working"
+          python3 -m pip --version >/dev/null 2>&1 && echo "✅ pip working" || echo "❌ pip still not working"
+
+          echo "=== 🎯 SETUP COMPLETE ==="
+
 
       - name: List all packages
         id: list
@@ -201,21 +294,34 @@ jobs:
         id: subset
         env:
           SUBSET_MODE: ${{ github.event.inputs.subset_mode || 'list' }}
-          SUBSET_VALUE: ${{ github.event.inputs.subset_value || 'build-essential' }}
+          SUBSET_VALUE: ${{ github.event.inputs.subset_value || '' }}
           EXCLUDE_BUILDERS: ${{ github.event.inputs.exclude_builders || 'true' }}
         run: |
           python3 - <<'PY'
           import os, re, json, random, pathlib
           # Normalize inputs (strip whitespace to avoid cases like "regex ")
           mode  = (os.environ.get("SUBSET_MODE","list") or "list").strip().lower()
-          value = (os.environ.get("SUBSET_VALUE","build-essential") or "build-essential").strip()
+          value = (os.environ.get("SUBSET_VALUE","") or "").strip()
           exclude_builders = (os.environ.get("EXCLUDE_BUILDERS","true") or "true").strip().lower() in ("1","true","yes","on")
+
+          # Provide sensible defaults for non-"all" modes when value is empty
+          if not value and mode != "all":
+              if mode == "list":
+                  value = "build-essential"  # Keep existing behavior for list mode
+              elif mode == "first_n" or mode == "sample_n":
+                  value = "10"  # Default to 10 packages
+              # For prefix/regex modes, empty value will result in no filtering (which is fine)
 
           # If a value is provided but mode is not explicitly set, infer a sensible mode
           original_mode = mode
           def looks_like_regex(s: str) -> bool:
               return bool(re.search(r"[\\^$.|?*+()[{]", s))
-          if (mode in ("", "all", "auto")) and value:
+
+          # Special handling for "all" mode - don't infer from value if explicitly set to "all"
+          if mode == "all":
+              # For "all" mode, ignore the value and process all packages
+              print(f"[subset] mode is 'all' - will process all packages regardless of value")
+          elif (mode in ("", "auto")) and value:
               if "," in value:
                   mode = "list"
               elif value.isdigit():
@@ -251,14 +357,34 @@ jobs:
               not pkg.startswith('┬') and
               not pkg.startswith('┴') and
               not pkg.startswith('$') and
+              not pkg.startswith('[') and  # Filter out timestamps like [23:35:52]
+              'Saved versions to cache' not in pkg and  # Filter out cache messages
+              '{' not in pkg and  # Filter out JSON-like content
+              '}' not in pkg and  # Filter out JSON-like content
+              not pkg.startswith('DEBUG:') and  # Filter out debug messages
+              not pkg.startswith('INFO:') and   # Filter out info messages
+              not pkg.startswith('WARNING:') and # Filter out warning messages
+              not pkg.startswith('ERROR:') and  # Filter out error messages
               pkg and
               not pkg.isspace()
             )
           all_valid = [p for p in pkgs if is_valid_name(p)]
           print(f"[subset] totals: raw_lines={total_lines} valid_baseline={len(all_valid)} exclude_builders={exclude_builders}")
 
+          # Debug: Show invalid packages that were filtered out
+          invalid_pkgs = [p for p in pkgs if not is_valid_name(p)]
+          if invalid_pkgs:
+              print(f"[subset] DEBUG: Filtered out {len(invalid_pkgs)} invalid packages:")
+              for i, invalid_pkg in enumerate(invalid_pkgs[:10]):  # Show first 10
+                  print(f"  Invalid {i+1}: {repr(invalid_pkg)} (len={len(invalid_pkg)})")
+              if len(invalid_pkgs) > 10:
+                  print(f"  ... and {len(invalid_pkgs) - 10} more invalid packages")
+
           # First apply subset filtering
-          if mode == "prefix" and value:
+          if mode == "all":
+              # For "all" mode, don't filter packages - keep all of them
+              print(f"[subset] mode='all' - keeping all {len(pkgs)} packages")
+          elif mode == "prefix" and value:
               pkgs = [p for p in pkgs if base(p).lower().startswith(value.lower())]
           elif mode == "regex" and value:
               try:
@@ -382,25 +508,34 @@ jobs:
             exit 0
           fi
           M=$(jq 'length' filtered.json)
-          TARGET="${{ github.event.inputs.target_jobs_per_platform || '60' }}"
-          if [[ -z "$TARGET" || "$TARGET" -lt 1 ]]; then TARGET=60; fi
-          K=$(( (M + TARGET - 1) / TARGET ))   # ceil(M / TARGET)
 
-          # Smart chunk sizing: enable parallel execution for small package counts
-          # For small counts, create multiple chunks to utilize available runners
-          if [[ "$M" -le 20 ]]; then
-            # For small package counts, create up to 5 chunks for parallel execution
-            K=$(( (M + 4) / 5 ))  # ceil(M / 5) for up to 5 chunks
-            if [[ "$K" -lt 1 ]]; then K=1; fi  # Ensure at least 1 chunk
-            echo "Small package count ($M), using chunk_size=$K for parallel execution (up to 5 chunks)"
-          elif [[ "$K" -lt 5 ]]; then
-            # For larger package counts, maintain minimum of 5 to avoid too many tiny jobs
-            K=5
-            echo "Applying minimum chunk_size=5 for larger package counts"
+          # Configurable chunking parameters
+          TARGET_CHUNKS_SMALL="${{ github.event.inputs.target_chunks_small || '20' }}"
+          MAX_PACKAGES_PER_CHUNK="${{ github.event.inputs.max_packages_per_chunk || '5' }}"
+
+          # Validate inputs
+          if [[ -z "$TARGET_CHUNKS_SMALL" || "$TARGET_CHUNKS_SMALL" -lt 1 ]]; then TARGET_CHUNKS_SMALL=20; fi
+          if [[ -z "$MAX_PACKAGES_PER_CHUNK" || "$MAX_PACKAGES_PER_CHUNK" -lt 1 ]]; then MAX_PACKAGES_PER_CHUNK=5; fi
+
+          # Calculate threshold: packages where we switch strategies
+          THRESHOLD=$(( TARGET_CHUNKS_SMALL * MAX_PACKAGES_PER_CHUNK ))
+
+          # Smart chunk sizing to utilize available runners
+          if [[ "$M" -le "$THRESHOLD" ]]; then
+            # For small workloads: aim for target_chunks_small chunks
+            K=$(( (M + TARGET_CHUNKS_SMALL - 1) / TARGET_CHUNKS_SMALL ))  # ceil(M / target_chunks_small)
+            if [[ "$K" -lt 1 ]]; then K=1; fi
+            ACTUAL_CHUNKS=$(( (M + K - 1) / K ))
+            echo "Small workload ($M ≤ $THRESHOLD packages): aiming for $TARGET_CHUNKS_SMALL chunks, chunk_size=$K, actual_chunks=$ACTUAL_CHUNKS"
+          else
+            # For large workloads: keep max_packages_per_chunk to maximize parallelization
+            K=$MAX_PACKAGES_PER_CHUNK
+            ACTUAL_CHUNKS=$(( (M + K - 1) / K ))
+            echo "Large workload ($M > $THRESHOLD packages): using max chunk_size=$K for parallelization, actual_chunks=$ACTUAL_CHUNKS"
           fi
 
           echo "chunk_size=$K" >> "$GITHUB_OUTPUT"
-          echo "Auto chunk_size=$K (M=$M, target_jobs_per_platform=$TARGET)"
+          echo "Auto chunk_size=$K (M=$M packages, actual_chunks=$ACTUAL_CHUNKS)"
 
       - name: Chunk filtered list
         id: chunk
@@ -590,6 +725,72 @@ jobs:
         with:
           clean: false
 
+      - name: Bulletproof environment setup
+        id: bulletproof-setup
+        run: |
+          echo "=== 🛡️ BULLETPROOF ENVIRONMENT SETUP ==="
+          echo "Ubuntu version: $(lsb_release -rs)"
+          echo "Python version: $(python3 --version)"
+          echo "Workspace: ${{ github.workspace }}"
+          echo "Current directory: $(pwd)"
+
+          # Step 1: Ensure system pip is available as fallback
+          echo "🔧 Step 1: Ensuring system pip availability..."
+          if ! python3 -m pip --version >/dev/null 2>&1; then
+            echo "⚠️ System pip not available, installing..."
+            sudo apt-get update -qq
+            sudo apt-get install -y python3-pip
+            echo "✅ System pip installed"
+          else
+            echo "✅ System pip already available"
+          fi
+
+          # Step 2: Run install.sh if needed (creates venv on Ubuntu 24.04)
+          MARKER="${{ github.workspace }}/.ci_setup_done"
+          echo "🔧 Step 2: Running jetson-containers setup..."
+          echo "Marker file: $MARKER"
+          echo "Marker exists: $([ -f "$MARKER" ] && echo 'YES' || echo 'NO')"
+
+          if [[ ! -f "$MARKER" ]]; then
+            echo "Running install.sh for the first time..."
+            echo "=== install.sh output ==="
+
+            # On Ubuntu 24.04, install.sh creates a venv which is crucial
+            if bash ./install.sh 2>&1 | tee install_output.log; then
+              touch "$MARKER"
+              echo "✅ install.sh completed successfully, created marker file"
+
+              # Check if venv was created (Ubuntu 24.04)
+              if [ -d "venv" ]; then
+                echo "✅ Virtual environment created at ./venv/"
+              fi
+            else
+              echo "⚠️ install.sh failed, but continuing with system pip fallback"
+              echo "📋 This might be expected on Ubuntu 24.04 if dependencies are missing"
+            fi
+          else
+            echo "✅ Setup already completed (marker file exists)"
+          fi
+
+          # Step 3: Verify environment is working
+          echo "🔧 Step 3: Environment verification..."
+          echo "Python path: $(which python3)"
+          echo "Virtual env check: $([ -d "venv" ] && echo 'venv directory exists' || echo 'no venv directory')"
+
+          # Test pip availability (system or venv)
+          if python3 -m pip --version >/dev/null 2>&1; then
+            echo "✅ Pip is available"
+          else
+            echo "❌ Pip still not available - this is unexpected!"
+          fi
+
+          # Test required modules
+          echo "🧪 Testing required modules:"
+          python3 -c "import wget; print('✅ wget available')" 2>&1 || echo "⚠️ wget not available (will be installed later)"
+          python3 -c "import requests; print('✅ requests available')" 2>&1 || echo "⚠️ requests not available (will be installed later)"
+
+          echo "=== 🎯 SETUP COMPLETE ==="
+
       - name: Download platform plan
         uses: actions/download-artifact@v4
         with:
@@ -647,10 +848,85 @@ jobs:
           df -h /
           echo "Available memory: $(free -m | awk 'NR==2{printf "%.1f%%", $3*100/$2 }')"
 
+          echo "🔍 🛡️ BULLETPROOF BUILD ENVIRONMENT SETUP:"
+          echo "Ubuntu version: $(lsb_release -rs)"
+          echo "Python version: $(python3 --version)"
+          echo "Python path: $(which python3)"
+          echo "Current working directory: $(pwd)"
+          echo "Marker file exists: $([ -f "${{ github.workspace }}/.ci_setup_done" ] && echo 'YES' || echo 'NO')"
+
+          # Step 1: Activate virtual environment if it exists (Ubuntu 24.04+)
+          if [ -d "venv" ] && [ -f "venv/bin/activate" ]; then
+            echo "🔧 Step 1: Activating virtual environment..."
+            source venv/bin/activate
+            echo "✅ Virtual environment activated"
+            echo "  - Updated Python path: $(which python3)"
+            echo "  - Updated pip: $(python3 -m pip --version 2>&1 || echo 'pip not available in venv')"
+          else
+            echo "🔧 Step 1: No virtual environment found, using system Python"
+          fi
+
+          # Step 2: Ensure pip is available (fallback to system if venv fails)
+          echo "🔧 Step 2: Ensuring pip availability..."
+          if ! python3 -m pip --version >/dev/null 2>&1; then
+            echo "⚠️ Pip not available, installing system pip as fallback..."
+            sudo apt-get update -qq
+            sudo apt-get install -y python3-pip
+            echo "✅ System pip installed as fallback"
+          else
+            echo "✅ Pip is available"
+          fi
+
+          # Step 3: Install missing required modules if needed
+          echo "🔧 Step 3: Ensuring required modules are available..."
+
+          # Check if we're in an externally managed environment (Ubuntu 24.04+)
+          UBUNTU_VERSION=$(lsb_release -rs)
+          IN_VENV=$(python3 -c "import sys; print(sys.prefix != sys.base_prefix)" 2>/dev/null || echo "False")
+
+          echo "🔍 Environment check:"
+          echo "  - Ubuntu version: $UBUNTU_VERSION"
+          echo "  - In virtual environment: $IN_VENV"
+
+          if [[ "$UBUNTU_VERSION" == "24.04" ]] && [[ "$IN_VENV" == "False" ]]; then
+            echo "⚠️ Ubuntu 24.04 detected with externally managed environment (not in venv)"
+            echo "🔧 Using --break-system-packages to install required modules"
+            PIP_INSTALL_FLAGS="--break-system-packages --quiet"
+          else
+            echo "✅ Safe to install packages normally"
+            PIP_INSTALL_FLAGS="--quiet"
+          fi
+
+          # Install wget if missing
+          if ! python3 -c "import wget" >/dev/null 2>&1; then
+            echo "⚠️ wget module missing, installing with flags: $PIP_INSTALL_FLAGS"
+            python3 -m pip install wget $PIP_INSTALL_FLAGS
+            echo "✅ wget module installed"
+          else
+            echo "✅ wget module available"
+          fi
+
+          # Install requests if missing
+          if ! python3 -c "import requests" >/dev/null 2>&1; then
+            echo "⚠️ requests module missing, installing with flags: $PIP_INSTALL_FLAGS"
+            python3 -m pip install requests $PIP_INSTALL_FLAGS
+            echo "✅ requests module installed"
+          else
+            echo "✅ requests module available"
+          fi
+
+          # Step 4: Final verification
+          echo "🧪 Step 4: Final environment verification..."
+          python3 -c "import wget; print('✅ wget working')" || echo "❌ wget still not working"
+          python3 -c "import requests; print('✅ requests working')" || echo "❌ requests still not working"
+          python3 -m pip --version >/dev/null 2>&1 && echo "✅ pip working" || echo "❌ pip still not working"
+
+          echo "=== 🎯 BUILD ENVIRONMENT READY ==="
+
           python3 - <<'PY'
           import json, os, subprocess, time, pathlib, re, gc
           pkgs = json.loads(pathlib.Path("packages.json").read_text())
-          runner = os.environ.get("RUNNER_NAME") or os.environ["RUNNER_LABEL"]
+          runner = os.environ.get("RUNNER_NAME", "unknown")
           sha = os.environ["GITHUB_SHA"]
           repo = os.environ["GITHUB_REPOSITORY"]
           run_id = os.environ["GITHUB_RUN_ID"]
@@ -666,10 +942,32 @@ jobs:
           print(f"  - Total packages: {len(pkgs)}")
           results = []
           total = len(pkgs)
+          start_time = time.time()
 
-          # Create initial empty results.json file
-          pathlib.Path("results.json").write_text(json.dumps([], indent=2))
-          print("📝 Created initial empty results.json file")
+          # Pre-populate results.json with all planned packages (placeholder data)
+          print("📝 Pre-populating results.json with all planned packages...")
+          for pkg in pkgs:
+            base, tag = (pkg.split(":", 1) + ["latest"])[:2] if ":" in pkg else (pkg, "latest")
+            results.append({
+              "package": pkg,
+              "tag": tag,
+              "status": "pending",
+              "duration_s": 0.0,
+              "timestamp": start_time,
+              "run_id": os.environ.get('GITHUB_RUN_ID', 'unknown'),
+              "run_url": f"https://github.com/{os.environ.get('GITHUB_REPOSITORY', 'unknown')}/actions/runs/{os.environ.get('GITHUB_RUN_ID', 'unknown')}",
+              "sha": os.environ.get('GITHUB_SHA', 'unknown'),
+              "runner": os.environ.get('RUNNER_NAME', 'unknown'),
+              "runner_label": os.environ.get('RUNNER_NAME', 'unknown'),
+              "log_relpath": None,
+              "failure_point": "not_started",
+              "timestamp_start": start_time,
+              "timestamp_finish": None
+            })
+
+          # Save initial results.json with all planned packages
+          pathlib.Path("results.json").write_text(json.dumps(results, indent=2))
+          print(f"📝 Created initial results.json with {len(results)} planned packages")
 
           def check_memory():
             try:
@@ -725,6 +1023,17 @@ jobs:
                   cmd = ["./build.sh", "--logs", per_dir, "--build-flags=--no-cache", pkg]
               print(f"[build] cmd: {' '.join(cmd)}")
 
+              # Update status to "started" before beginning build
+              for result in results:
+                if result["package"] == pkg:
+                  result.update({
+                    "status": "started",
+                    "failure_point": "BUILDING (in progress)"
+                  })
+                  break
+              pathlib.Path("results.json").write_text(json.dumps(results, indent=2))
+              print(f"🔄 Updated {pkg} status to 'started'")
+
               # Use PIPE to capture output in real-time
               p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)
               next_hb = time.time() + 30  # More frequent heartbeat every 30s
@@ -746,9 +1055,19 @@ jobs:
                         if "> BUILDING" in line and "│" in line:
                           stage = line.split("│")[1].strip().replace("> BUILDING ", "").strip()
                           print(f"[stage] Currently BUILDING: {stage}", flush=True)
+                          # Update failure point to show current stage
+                          for result in results:
+                            if result["package"] == pkg:
+                              result["failure_point"] = f"BUILDING ({stage})"
+                              break
                         elif "> TESTING" in line and "│" in line:
                           stage = line.split("│")[1].strip().replace("> TESTING ", "").strip()
                           print(f"[stage] Currently TESTING:  {stage}", flush=True)
+                          # Update failure point to show current stage
+                          for result in results:
+                            if result["package"] == pkg:
+                              result["failure_point"] = f"TESTING ({stage})"
+                              break
                   except:
                     pass
 
@@ -931,22 +1250,38 @@ jobs:
               failure_point = "BUILDING (timeout)"
             elif status == "oom_killed":
               failure_point = "BUILDING (out of memory)"
-            results.append({
-              "sha": sha,
-              "ref": os.environ.get("GITHUB_REF", ""),
-              "runner": runner,
-              "runner_label": os.environ.get("RUNNER_LABEL", ""),
-              "package": name,
-              "tag": tag,
-              "status": status,
-              "failure_point": failure_point,
-              "duration_s": round(time.time() - t0, 1),
-              "run_id": run_id,
-              "run_attempt": attempt,
-              "run_url": f"https://github.com/{repo}/actions/runs/{run_id}",
-              "log_relpath": logf,
-              "timestamp": time.time()
-            })
+            # Update the existing entry for this package
+            for result in results:
+              if result["package"] == pkg:
+                result.update({
+                  "sha": sha,
+                  "ref": os.environ.get("GITHUB_REF", ""),
+                  "runner": runner,
+                  "runner_label": os.environ.get("RUNNER_NAME", "unknown"),
+                  "status": status,
+                  "failure_point": failure_point,
+                  "duration_s": round(time.time() - t0, 1),
+                  "run_id": run_id,
+                  "run_attempt": attempt,
+                  "run_url": f"https://github.com/{repo}/actions/runs/{run_id}",
+                  "log_relpath": logf,
+                  "timestamp": time.time(),
+                  "timestamp_finish": time.time()
+                })
+                break
+          # Mark any remaining packages as timeout (job may have timed out before completing all packages)
+          current_time = time.time()
+          for result in results:
+            if result["status"] == "pending":
+              result.update({
+                "status": "timeout",
+                "failure_point": "job_timeout",
+                "duration_s": round(current_time - result["timestamp_start"], 1),
+                "timestamp": current_time,
+                "timestamp_finish": current_time
+              })
+              print(f"⚠️ Marked {result['package']} as timeout (job timed out before completion)")
+
           pathlib.Path("results.json").write_text(json.dumps(results, indent=2))
           print(f"wrote {len(results)} results")
 
@@ -1160,8 +1495,20 @@ jobs:
             if jq -s '[.[]] | add' "${files[@]}" > results.json; then
               echo "✅ Successfully merged ${#files[@]} chunk artifacts"
             else
-              echo "⚠️ Failed to merge JSON files, creating empty results.json"
-              echo "[]" > results.json
+              echo "⚠️ Failed to merge JSON files - creating meaningful results.json with plan data"
+              echo "   This can happen when chunk artifacts exist but are empty or invalid"
+
+              # Download plan artifacts to get package information
+              echo "📥 Downloading plan artifacts to create meaningful results..."
+              if [ -d "_plans" ]; then
+                echo "   Plan artifacts already available"
+              else
+                # Download plan artifacts
+                gh run download ${{ github.run_id }} --dir _plans --pattern "plan-*" || echo "   Could not download plan artifacts"
+              fi
+
+              # Create meaningful results.json with plan data
+              python3 .github/workflows/scripts/create_meaningful_results.py
             fi
           fi
 
