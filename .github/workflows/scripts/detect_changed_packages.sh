@@ -21,6 +21,17 @@ fi
 
 git fetch --no-tags --prune origin "$BASE_REF_ENV"
 
+# Check if there are any changes to fundamental files:
+# - jetson_containers/*.py
+# - .github/workflows/
+# - root-level .sh files
+# - pyproject.toml, requirements.txt
+# - jetson-containers file
+mapfile -t fundamental_changes < <(
+  git diff --name-only "origin/${BASE_REF_ENV}"...HEAD \
+    | grep -E '^(jetson_containers/.*\.py$|\.github/workflows/|[^/]+\.sh$|pyproject\.toml$|requirements\.txt$|jetson-containers$)' || true
+)
+
 mapfile -t candidates < <(
   git diff --name-only "origin/${BASE_REF_ENV}"...HEAD \
     | awk -F/ '$1=="packages" { if (NF>=3) print $3; else if (NF==2) print $2 }' \
@@ -35,8 +46,30 @@ for p in "${candidates[@]}"; do
   fi
 done
 
+# If fundamental changes detected, ensure build-essential is in the list
+if (( ${#fundamental_changes[@]} > 0 )); then
+  echo "Fundamental changes detected - including build-essential:" >&2
+  printf '%s\n' "${fundamental_changes[@]}" >&2
+  
+  # Check if build-essential is already in the packages array
+  build_essential_present=false
+  for p in "${packages[@]}"; do
+    if [[ "$p" == "build-essential" ]]; then
+      build_essential_present=true
+      break
+    fi
+  done
+  
+  # Add build-essential if not already present
+  if [[ "$build_essential_present" == "false" ]]; then
+    packages=("build-essential" "${packages[@]}")
+  fi
+fi
+
+# If no packages detected at all, default to build-essential
 if (( ${#packages[@]} == 0 )); then
-  json='[]'
+  echo "No package changes detected - defaulting to build-essential" >&2
+  json='["build-essential"]'
   echo "$json"
   if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     echo "packages=$json" >> "$GITHUB_OUTPUT"

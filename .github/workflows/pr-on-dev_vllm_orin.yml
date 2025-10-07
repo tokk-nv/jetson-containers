@@ -52,13 +52,38 @@ jobs:
       - name: Show git repository state
         run: bash .github/workflows/scripts/step-git-status.sh
 
-      - name: Test build vllm package on orin
+      - name: Detect changed packages
+        id: detect-packages
+        run: |
+          BASE_REF="${{ github.event_name == 'pull_request' && github.base_ref || 'dev' }}" bash .github/workflows/scripts/detect_changed_packages.sh
+          packages_json=$(BASE_REF="${{ github.event_name == 'pull_request' && github.base_ref || 'dev' }}" bash .github/workflows/scripts/detect_changed_packages.sh)
+          echo "packages_json=$packages_json"
+          # Convert JSON array to space-separated string
+          packages_string=$(echo "$packages_json" | jq -r '.[]' | tr '\n' ' ' | sed 's/ $//')
+          echo "packages_string=$packages_string"
+          # Count packages
+          packages_count=$(echo "$packages_json" | jq '. | length')
+          echo "packages_count=$packages_count"
+          
+          echo ""
+          echo "=========================================="
+          echo "📦 DETECTED PACKAGES TO BUILD"
+          echo "=========================================="
+          echo "Count: $packages_count package(s)"
+          echo "Packages: $packages_string"
+          echo "=========================================="
+          echo ""
+          
+          echo "packages=$packages_string" >> $GITHUB_OUTPUT
+          echo "packages_count=$packages_count" >> $GITHUB_OUTPUT
+
+      - name: Test build packages on orin
         id: package-test
-        run: bash .github/workflows/scripts/step-build-package.sh vllm
+        run: bash .github/workflows/scripts/step-build-package.sh ${{ steps.detect-packages.outputs.packages }}
 
       - name: Analyze build results
         if: always()
-        run: bash .github/workflows/scripts/step-analyze-results.sh vllm ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }}
+        run: bash .github/workflows/scripts/step-analyze-results.sh ${{ steps.detect-packages.outputs.packages }} ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }}
 
       - name: Test build results
-        run: bash .github/workflows/scripts/step-test-results-summary.sh vllm ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }} ${{ steps.package-test.outputs.failure_phase }} ${{ steps.package-test.outputs.failure_stage }} ${{ steps.package-test.outputs.failure_component }}
+        run: bash .github/workflows/scripts/step-test-results-summary.sh ${{ steps.detect-packages.outputs.packages }} ${{ steps.package-test.outputs.stage1 }} ${{ steps.package-test.outputs.stage2 }} ${{ steps.package-test.outputs.build_status }} ${{ steps.package-test.outputs.failure_phase }} ${{ steps.package-test.outputs.failure_stage }} ${{ steps.package-test.outputs.failure_component }}

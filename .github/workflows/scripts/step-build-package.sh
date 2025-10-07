@@ -1,16 +1,31 @@
 #!/bin/bash
 # Build package script for GitHub Actions workflows
-# Usage: ./build-package.sh <package_name>
+# Usage: ./build-package.sh <package_name> [<package_name2> ...]
 # Example: ./build-package.sh vllm
+# Example: ./build-package.sh python vllm transformers
 
-PACKAGE_NAME="$1"
+PACKAGES="$@"
 
-if [ -z "$PACKAGE_NAME" ]; then
-    echo "Error: Package name is required"
-    echo "Usage: $0 <package_name>"
+if [ -z "$PACKAGES" ]; then
+    echo "Error: At least one package name is required"
+    echo "Usage: $0 <package_name> [<package_name2> ...]"
     exit 1
 fi
-echo "=== Testing $PACKAGE_NAME package on Jetson Orin ==="
+
+# Count packages
+PACKAGE_COUNT=$(echo $PACKAGES | wc -w)
+
+echo "=========================================="
+echo "📦 PACKAGE BUILD TEST"
+echo "=========================================="
+echo "Platform: Jetson Orin"
+echo "Package Count: $PACKAGE_COUNT"
+echo "Packages to Build:"
+for pkg in $PACKAGES; do
+    echo "  - $pkg"
+done
+echo "=========================================="
+echo ""
 chmod +x ./build.sh 
 chmod +x ./run.sh
 
@@ -27,11 +42,11 @@ fi
 
 # Stage 2: Build package
 echo ""
-echo "🔨 STAGE 2: Building $PACKAGE_NAME package..."
-echo "Command: ./build.sh --build-flags='--no-cache' --no-github-api $PACKAGE_NAME"
+echo "🔨 STAGE 2: Building packages: $PACKAGES..."
+echo "Command: ./build.sh --build-flags='--no-cache' --no-github-api $PACKAGES"
 
 # Capture build output with timestamps
-if timeout 7200 ./build.sh --build-flags="--no-cache" --no-github-api "$PACKAGE_NAME" 2>&1 | tee build.log; then
+if timeout 7200 ./build.sh --build-flags="--no-cache" --no-github-api $PACKAGES 2>&1 | tee build.log; then
     # Check if the build actually succeeded by looking for failure indicators
     if grep -i "failed building\|build failed\|error.*failed" build.log; then
         echo "❌ STAGE 2 FAILED: Build script completed but build failed"
@@ -148,16 +163,16 @@ if timeout 7200 ./build.sh --build-flags="--no-cache" --no-github-api "$PACKAGE_
         echo "failure_component=$FAILURE_COMPONENT" >> $GITHUB_OUTPUT
 
     else
-        echo "✅ STAGE 2 PASSED: $PACKAGE_NAME package build successful"
+        echo "✅ STAGE 2 PASSED: Packages build successful"
         echo "stage2=passed" >> $GITHUB_OUTPUT
         echo "build_status=success" >> $GITHUB_OUTPUT
     fi
 else
     BUILD_EXIT_CODE=$?
-    echo "❌ STAGE 2 FAILED: $PACKAGE_NAME package build failed with exit code $BUILD_EXIT_CODE"
+    echo "❌ STAGE 2 FAILED: Packages build failed with exit code $BUILD_EXIT_CODE"
     echo "stage2=failed" >> $GITHUB_OUTPUT
     echo "build_status=failed" >> $GITHUB_OUTPUT
     exit $BUILD_EXIT_CODE
 fi
 
-echo "✅ $PACKAGE_NAME package test completed successfully on Orin!"
+echo "✅ Package test completed successfully on Orin!"
