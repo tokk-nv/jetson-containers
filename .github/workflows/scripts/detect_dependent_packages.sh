@@ -11,6 +11,7 @@ set -euo pipefail
 # This script detects changed packages and adds vllm/sglang if any of their dependencies were touched.
 
 BASE_REF_ENV=${BASE_REF:-}
+DEFAULT_PACKAGE="build-essential"
 
 if [[ -z "$BASE_REF_ENV" ]]; then
   json='[]'
@@ -30,8 +31,23 @@ get_dependencies() {
   local pkg="$1"
   local dockerfile=""
   
-  # Search for the package Dockerfile in the packages directory
+  # Search for the package by name field in Dockerfile or by folder name
+  # First, try to find by folder name
   dockerfile=$(find packages -type f -path "*/$pkg/Dockerfile" | head -n 1)
+  
+  # If not found by folder, search for Dockerfile with matching name field
+  if [[ -z "$dockerfile" || ! -f "$dockerfile" ]]; then
+    while IFS= read -r candidate; do
+      local name_line=$(grep -E '^\s*#\s*name:' "$candidate" | head -n 1 || true)
+      if [[ -n "$name_line" ]]; then
+        local pkg_name=$(echo "$name_line" | sed -E 's/.*name:\s*//' | tr -d ' ')
+        if [[ "$pkg_name" == "$pkg" ]]; then
+          dockerfile="$candidate"
+          break
+        fi
+      fi
+    done < <(find packages -type f -name "Dockerfile")
+  fi
   
   if [[ -z "$dockerfile" || ! -f "$dockerfile" ]]; then
     return 0
@@ -98,7 +114,42 @@ mapfile -t fundamental_changes < <(
     | grep -E '^(jetson_containers/.*\.py$|\.github/workflows/|[^/]+\.sh$|pyproject\.toml$|requirements\.txt$|jetson-containers$)' || true
 )
 
-# Get all changed packages
+# Function to get package name from Dockerfile
+# Usage: get_package_name <folder_path>
+# Returns: package name from Dockerfile's "# name:" field, or folder name if not found
+get_package_name() {
+  local folder="$1"
+  local dockerfile=""
+  
+  # Find the Dockerfile in the folder
+  if [[ -f "packages/$folder/Dockerfile" ]]; then
+    dockerfile="packages/$folder/Dockerfile"
+  elif [[ -f $(find packages -type f -path "*/$folder/Dockerfile" | head -n 1) ]]; then
+    dockerfile=$(find packages -type f -path "*/$folder/Dockerfile" | head -n 1)
+  else
+    echo "$folder"
+    return 0
+  fi
+  
+  # Extract the name from the Dockerfile header
+  local name_line=$(grep -E '^\s*#\s*name:' "$dockerfile" | head -n 1 || true)
+  
+  if [[ -z "$name_line" ]]; then
+    echo "$folder"
+    return 0
+  fi
+  
+  # Parse the name from the line
+  local pkg_name=$(echo "$name_line" | sed -E 's/.*name:\s*//' | tr -d ' ')
+  
+  if [[ -n "$pkg_name" ]]; then
+    echo "$pkg_name"
+  else
+    echo "$folder"
+  fi
+}
+
+# Get all changed package folders
 mapfile -t candidates < <(
   git diff --name-only "origin/${BASE_REF_ENV}"...HEAD \
     | awk -F/ '$1=="packages" { if (NF>=3) print $3; else if (NF==2) print $2 }' \
@@ -109,9 +160,81 @@ packages=()
 for p in "${candidates[@]}"; do
   [[ -z "$p" || "$p" == *.* ]] && continue
   if [[ -d "packages/$p" ]] || compgen -G "packages/*/$p" >/dev/null; then
-    packages+=("$p")
+    # Get the actual package name from the Dockerfile
+    pkg_name=$(get_package_name "$p")
+    packages+=("$pkg_name")
   fi
 done
+
+
+# Only check for dependent packages if we have actual package changes
+if (( ${#packages[@]} > 0 )); then
+  echo "Checking dependencies for vllm and sglang..." >&2
+
+  # Get all dependencies for vllm
+  vllm_all_deps=$(get_all_dependencies "vllm")
+  echo "vllm dependencies: $vllm_all_deps" >&2
+
+  # Get all dependencies for sglang
+  sglang_all_deps=$(get_all_dependencies "sglang")
+  echo "sglang dependencies: $sglang_all_deps" >&2
+
+  # Check if any changed package affects vllm
+  vllm_affected=false
+  for changed_pkg in "${packages[@]}"; do
+    for dep in $vllm_all_deps; do
+      if [[ "$changed_pkg" == "$dep" ]]; then
+        vllm_affected=true
+        echo "Package '$changed_pkg' is a dependency of vllm" >&2
+        break 2
+      fi
+    done
+  done
+
+  # Check if any changed package affects sglang
+  sglang_affected=false
+  for changed_pkg in "${packages[@]}"; do
+    for dep in $sglang_all_deps; do
+      if [[ "$changed_pkg" == "$dep" ]]; then
+        sglang_affected=true
+        echo "Package '$changed_pkg' is a dependency of sglang" >&2
+        break 2
+      fi
+    done
+  done
+
+  # Add vllm if affected and not already in the list
+  if [[ "$vllm_affected" == "true" ]]; then
+    vllm_present=false
+    for p in "${packages[@]}"; do
+      if [[ "$p" == "vllm" ]]; then
+        vllm_present=true
+        break
+      fi
+    done
+    
+    if [[ "$vllm_present" == "false" ]]; then
+      echo "Adding vllm to the build list (dependency was touched)" >&2
+      packages+=("vllm")
+    fi
+  fi
+
+  # Add sglang if affected and not already in the list
+  if [[ "$sglang_affected" == "true" ]]; then
+    sglang_present=false
+    for p in "${packages[@]}"; do
+      if [[ "$p" == "sglang" ]]; then
+        sglang_present=true
+        break
+      fi
+    done
+    
+    if [[ "$sglang_present" == "false" ]]; then
+      echo "Adding sglang to the build list (dependency was touched)" >&2
+      packages+=("sglang")
+    fi
+  fi
+fi
 
 # If fundamental changes detected, ensure build-essential is in the list
 if (( ${#fundamental_changes[@]} > 0 )); then
@@ -120,88 +243,22 @@ if (( ${#fundamental_changes[@]} > 0 )); then
   
   build_essential_present=false
   for p in "${packages[@]}"; do
-    if [[ "$p" == "build-essential" ]]; then
+    if [[ "$p" == "$DEFAULT_PACKAGE" ]]; then
       build_essential_present=true
       break
     fi
   done
   
   if [[ "$build_essential_present" == "false" ]]; then
-    packages=("build-essential" "${packages[@]}")
+    packages=("$DEFAULT_PACKAGE" "${packages[@]}")
   fi
 fi
 
-# Now check if any changed package is a dependency of vllm or sglang
-echo "Checking dependencies for vllm and sglang..." >&2
-
-# Get all dependencies for vllm
-vllm_all_deps=$(get_all_dependencies "vllm")
-echo "vllm dependencies: $vllm_all_deps" >&2
-
-# Get all dependencies for sglang
-sglang_all_deps=$(get_all_dependencies "sglang")
-echo "sglang dependencies: $sglang_all_deps" >&2
-
-# Check if any changed package affects vllm
-vllm_affected=false
-for changed_pkg in "${packages[@]}"; do
-  for dep in $vllm_all_deps; do
-    if [[ "$changed_pkg" == "$dep" ]]; then
-      vllm_affected=true
-      echo "Package '$changed_pkg' is a dependency of vllm" >&2
-      break 2
-    fi
-  done
-done
-
-# Check if any changed package affects sglang
-sglang_affected=false
-for changed_pkg in "${packages[@]}"; do
-  for dep in $sglang_all_deps; do
-    if [[ "$changed_pkg" == "$dep" ]]; then
-      sglang_affected=true
-      echo "Package '$changed_pkg' is a dependency of sglang" >&2
-      break 2
-    fi
-  done
-done
-
-# Add vllm if affected and not already in the list
-if [[ "$vllm_affected" == "true" ]]; then
-  vllm_present=false
-  for p in "${packages[@]}"; do
-    if [[ "$p" == "vllm" ]]; then
-      vllm_present=true
-      break
-    fi
-  done
-  
-  if [[ "$vllm_present" == "false" ]]; then
-    echo "Adding vllm to the build list (dependency was touched)" >&2
-    packages+=("vllm")
-  fi
-fi
-
-# Add sglang if affected and not already in the list
-if [[ "$sglang_affected" == "true" ]]; then
-  sglang_present=false
-  for p in "${packages[@]}"; do
-    if [[ "$p" == "sglang" ]]; then
-      sglang_present=true
-      break
-    fi
-  done
-  
-  if [[ "$sglang_present" == "false" ]]; then
-    echo "Adding sglang to the build list (dependency was touched)" >&2
-    packages+=("sglang")
-  fi
-fi
 
 # If no packages detected at all, default to build-essential
 if (( ${#packages[@]} == 0 )); then
-  echo "No package changes detected - defaulting to build-essential" >&2
-  json='["build-essential"]'
+  echo "No package changes detected - defaulting to $DEFAULT_PACKAGE" >&2
+  json="[\"$DEFAULT_PACKAGE\"]"
   echo "$json"
   if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     echo "packages=$json" >> "$GITHUB_OUTPUT"
