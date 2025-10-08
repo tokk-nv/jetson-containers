@@ -51,7 +51,7 @@ jobs:
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
-          bash .github/workflows/scripts/detect_changed_packages.sh | tee /dev/stderr
+          bash .github/workflows/scripts/detect_dependent_packages.sh | tee /dev/stderr
 
   build:
     name: "Build package: ${{ matrix.package }} on ${{ matrix.runner }}"

@@ -55,8 +55,8 @@ jobs:
       - name: Detect changed packages
         id: detect-packages
         run: |
-          BASE_REF="${{ github.event_name == 'pull_request' && github.base_ref || 'dev' }}" bash .github/workflows/scripts/detect_changed_packages.sh
-          packages_json=$(BASE_REF="${{ github.event_name == 'pull_request' && github.base_ref || 'dev' }}" bash .github/workflows/scripts/detect_changed_packages.sh)
+          BASE_REF="${{ github.event_name == 'pull_request' && github.base_ref || 'dev' }}" bash .github/workflows/scripts/detect_dependent_packages.sh
+          packages_json=$(BASE_REF="${{ github.event_name == 'pull_request' && github.base_ref || 'dev' }}" bash .github/workflows/scripts/detect_dependent_packages.sh)
           echo "packages_json=$packages_json"
           # Convert JSON array to space-separated string
           packages_string=$(echo "$packages_json" | jq -r '.[]' | tr '\n' ' ' | sed 's/ $//')
