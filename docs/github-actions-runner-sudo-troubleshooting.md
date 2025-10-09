@@ -1,4 +1,8 @@
-# Runner Sudo Configuration Fix
+# GitHub Actions Runner Sudo Configuration Troubleshooting
+
+> **Related Documentation:** [GitHub Actions Self-Hosted Runner Setup](./github-actions-self-hosted-runner-setup.md)
+>
+> This guide provides troubleshooting and fix scripts for sudo configuration issues on self-hosted runners.
 
 ## Problem
 

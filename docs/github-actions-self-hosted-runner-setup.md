@@ -115,6 +115,9 @@ sudo chown root:root /etc/sudoers.d/jetson-actions
 sudo chmod 0440 /etc/sudoers.d/jetson-actions
 ```
 
+> [!TIP]
+> **Troubleshooting Sudo Configuration:** If you encounter "Permission denied" errors during workflow checkout, see the [Sudo Configuration Troubleshooting Guide](./github-actions-runner-sudo-troubleshooting.md) for diagnostic tools and automated fix scripts.
+
 #### 3) Validate
 ```bash
 sudo visudo -c

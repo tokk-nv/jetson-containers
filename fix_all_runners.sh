@@ -42,14 +42,14 @@ for runner in "${RUNNERS[@]}"; do
     echo "========================================"
     echo "Processing: $runner"
     echo "========================================"
-    
+
     # Test connectivity
     if ! ssh -o ConnectTimeout=5 -o BatchMode=yes "jetson@$runner" "echo 'Connected'" >/dev/null 2>&1; then
         echo "❌ Cannot connect to $runner (check SSH access)"
         UNREACHABLE_RUNNERS+=("$runner")
         continue
     fi
-    
+
     # Copy script to runner
     echo "Copying fix script to $runner..."
     if ! scp -q "$SCRIPT_PATH" "jetson@$runner:/tmp/fix_runner_sudo.sh"; then
@@ -57,7 +57,7 @@ for runner in "${RUNNERS[@]}"; do
         FAILED_RUNNERS+=("$runner")
         continue
     fi
-    
+
     # Execute fix script
     echo "Executing fix script on $runner..."
     if ssh "jetson@$runner" "bash /tmp/fix_runner_sudo.sh"; then
