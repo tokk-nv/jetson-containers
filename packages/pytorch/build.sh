@@ -95,18 +95,18 @@ export USE_MEM_EFF_ATTENTION=1
 export USE_TENSORRT=0
 export USE_BLAS="$USE_BLAS"
 export BLAS="$BLAS"
-# If on CUDA 12, leave only SMs supported
-if [[ "${CUDA_VERSION}" == cu13* ]]; then
-    echo "CUDA 13 detected, turn off build with CUDSS (as 0.6 supported on CUDA 12)."
-    export USE_CUDSS=0
-else
-    echo "*** NOT CUDA 12 NOR CUDA 13."
+
+if [[ "$CUDA_VERSION" == *"12.6"* ]]; then
+    export TORCH_CUDA_ARCH_LIST="5.0;6.0;7.0;8.0;9.0"
+elif [[ "$CUDA_VERSION" == *"12.8"* ]]; then
+    export TORCH_CUDA_ARCH_LIST="7.0;8.0;9.0;10.0;12.0"
+elif [[ "$CUDA_VERSION" == *"13.0"* ]]; then
+    export TORCH_CUDA_ARCH_LIST="8.0;9.0;10.0;11.0;12.0+PTX"
 fi
 python3 setup.py bdist_wheel --dist-dir /opt
 
 cd /
 rm -rf /opt/pytorch
-
 # install the compiled wheel
 pip3 install /opt/torch*.whl
 python3 -c 'import torch; print(f"PyTorch {torch.__version__} installed successfully")'

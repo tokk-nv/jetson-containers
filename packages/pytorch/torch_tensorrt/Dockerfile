@@ -2,7 +2,7 @@
 # name: torch_tensorrt
 # group: pytorch
 # config: config.py
-# depends: [pytorch, torchvision, tensorrt, bazel]
+# depends: [pytorch, torchvision, cudastack:standard, bazel]
 # test: [test.py, test.sh]
 # notes: https://pytorch.org/TensorRT/getting_started/installation.html#installation
 #---
@@ -31,7 +31,7 @@ RUN pip3 install pyyaml && \
     sed 's|^        \"torch >=.*|        \"torch\"|g' -i setup.py && \
     sed "s|^        'torch>=.*|        'torch',|g" -i setup.py && \
     sed 's|^    python_requires=.*|    python_requires=\">=3.6\",|g' -i setup.py && \
-    cat setup.py && \    
+    cat setup.py && \
     #python3 setup.py install --jetpack-version ${JETPACK_MAJOR}.${JETPACK_MINOR} --use-cxx11-abi && \
     python3 setup.py bdist_wheel --jetpack-version ${JETPACK_MAJOR}.${JETPACK_MINOR} --use-cxx11-abi && \
     cp dist/torch_tensorrt*.whl /opt && \

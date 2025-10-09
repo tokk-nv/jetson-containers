@@ -19,7 +19,7 @@ pip3 install \
   "prometheus-client>=0.20.0" \
   psutil \
   pydantic \
-  pynvml \
+  nvidia-ml-py \
   python-multipart \
   "pyzmq>=25.1.2" \
   "soundfile>=0.13.1" \

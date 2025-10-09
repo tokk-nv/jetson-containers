@@ -1,7 +1,7 @@
 #---
 # name: jetson-utils
 # group: multimedia
-# depends: [cuda, tensorrt, python, cmake, gstreamer]
+# depends: [cuda, cudastack:standard, python, cmake, gstreamer]
 # test: [test.sh]
 #---
 ARG BASE_IMAGE
