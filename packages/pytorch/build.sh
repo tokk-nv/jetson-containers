@@ -15,8 +15,8 @@ sed -i 's|cpuinfo_log_error|cpuinfo_log_warning|' ${CPUINFO_PATCH}
 grep 'PR_SVE_GET_VL' ${CPUINFO_PATCH} || echo "patched ${CPUINFO_PATCH}"
 tail -20 ${CPUINFO_PATCH}
 
-pip3 install -r requirements.txt
-pip3 install scikit-build ninja
+uv pip install -r requirements.txt
+uv pip install scikit-build ninja
 
 
 #TORCH_CXX_FLAGS="-D_GLIBCXX_USE_CXX11_ABI=0" \
@@ -108,7 +108,7 @@ python3 setup.py bdist_wheel --dist-dir /opt
 cd /
 rm -rf /opt/pytorch
 # install the compiled wheel
-pip3 install /opt/torch*.whl
+uv pip install /opt/torch*.whl
 python3 -c 'import torch; print(f"PyTorch {torch.__version__} installed successfully")'
 
 # Verify installation in detail

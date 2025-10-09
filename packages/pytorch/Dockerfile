@@ -41,7 +41,7 @@ ENV TORCH_NVCC_FLAGS="-Xfatbin -compress-all -compress-mode=balance"
 # Conditional installation based on FORCE_BUILD
 RUN if [ "${FORCE_BUILD}" = "on" ]; then \
         echo "Installing PyTorch build dependencies..." && \
-        pip3 install \
+        uv pip install \
             scikit-build \
             ninja \
             'cmake<4' \
@@ -66,7 +66,7 @@ COPY requirements.txt requirements-build.txt /tmp/
 # Conditional requirements installation
 RUN if [ "${FORCE_BUILD}" = "on" ]; then \
         echo "Installing requirements.txt..." && \
-        pip3 install -r /tmp/requirements.txt \
+        uv pip install -r /tmp/requirements.txt \
             && rm -rf ~/.cache/pip \
             && rm /tmp/requirements.txt; \
     else \

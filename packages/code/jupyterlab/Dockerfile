@@ -20,10 +20,10 @@ SHELL ["/bin/bash", "-c"]
 RUN sed -i 's/^#force_color_prompt=yes/force_color_prompt=yes/' /root/.bashrc
 
 # jupyterlab<4 -- ModuleNotFoundError: No module named 'notebook.auth'
-RUN pip3 install jupyter "jupyterlab${JUPYTERLAB_VERSION_SPEC}" && \
-    pip3 install jupyterlab_widgets
+RUN uv pip install jupyter "jupyterlab${JUPYTERLAB_VERSION_SPEC}" && \
+    uv pip install jupyterlab_widgets
 
-RUN pip3 list
+RUN uv pip list
 RUN jupyter --version
 RUN jupyter labextension list
 

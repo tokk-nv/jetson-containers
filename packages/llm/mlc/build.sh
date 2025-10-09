@@ -79,9 +79,9 @@ fi
 cd python
 python3 setup.py --verbose bdist_wheel --dist-dir /opt
 
-pip3 install /opt/mlc*.whl
+uv pip install /opt/mlc*.whl
 
-ln -sf ${TVM_HOME:-/opt/tvm}/3rdparty "$(pip3 show tvm | awk '/Location:/ {print $2}')/tvm/3rdparty" || true
+ln -sf ${TVM_HOME:-/opt/tvm}/3rdparty "$(uv pip show tvm | awk '/Location:/ {print $2}')/tvm/3rdparty" || true
 
 # Upload wheels (best-effort)
 twine upload --verbose /opt/mlc_llm*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"

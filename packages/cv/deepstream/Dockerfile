@@ -84,7 +84,7 @@ RUN if [ "${PYDS_VERSION}" = "1.2.0" ]; then \
             libgirepository1.0-dev  \
         && rm -rf /var/lib/apt/lists/* \
         && apt-get clean && \
-        pip3 install build && \
+        uv pip install build && \
         cd /opt/nvidia/deepstream/deepstream/sources && \
         git clone https://github.com/NVIDIA-AI-IOT/deepstream_python_apps && \
         cd /opt/nvidia/deepstream/deepstream/sources/deepstream_python_apps && \
@@ -98,11 +98,11 @@ RUN if [ "${PYDS_VERSION}" = "1.2.0" ]; then \
         cd /opt/nvidia/deepstream/deepstream/sources/deepstream_python_apps/bindings && \
         export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc) && \
         python3 -m build && \
-        pip3 install ./dist/pyds-*.whl; \
+        uv pip install ./dist/pyds-*.whl; \
     else \
         cd /tmp && \
         wget $WGET_FLAGS https://github.com/NVIDIA-AI-IOT/deepstream_python_apps/releases/download/v${PYDS_VERSION}/pyds-${PYDS_VERSION}-py3-none-linux_aarch64.whl && \
-        pip3 install ./pyds-*.whl; \
+        uv pip install ./pyds-*.whl; \
     fi
 
 # make sure it loads

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -ex
 
-pip3 install \
+uv pip install \
   compressed-tensors \
   datasets \
   decord2 \
@@ -40,5 +40,5 @@ if [ "$FORCE_BUILD" == "on" ]; then
 	exit 1
 fi
 
-pip3 install sgl-kernel "sglang[all]~=${SGLANG_VERSION}" || \
-pip3 install sgl-kernel "sglang[all]~=${SGLANG_VERSION_SPEC}"
+uv pip install sgl-kernel "sglang[all]~=${SGLANG_VERSION}" || \
+uv pip install sgl-kernel "sglang[all]~=${SGLANG_VERSION_SPEC}"

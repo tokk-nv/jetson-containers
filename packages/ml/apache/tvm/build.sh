@@ -36,8 +36,8 @@ make -j$(nproc)
 
 
 cd /opt/tvm/python
-python3 setup.py bdist_wheel
+uv build --wheel --out-dir /opt/tvm/wheels .
 
-pip3 install dist/tvm-*.whl
+uv pip install /opt/tvm/wheels/tvm-*.whl
 
 twine upload --verbose dist/tvm-*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
