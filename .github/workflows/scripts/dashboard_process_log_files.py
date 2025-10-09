@@ -39,6 +39,34 @@ def process_run_logs(run_id: str, headers: Dict[str, str], repo: str):
     """Process log files for a specific run."""
     print(f"Processing logs for run {run_id}")
 
+    # Load results JSON to get runner names for each log
+    results_file = f'./runs/results-{run_id}.json'
+    log_to_runner_map = {}
+
+    if os.path.exists(results_file):
+        try:
+            with open(results_file, 'r') as f:
+                results = json.load(f)
+
+            # Create mapping from log base name to runner label
+            # log_relpath format: "logs/index_000_gdrcopy.log"
+            for result in results:
+                log_relpath = result.get('log_relpath', '')
+                runner_label = result.get('runner_label') or result.get('runner', 'unknown')
+
+                if log_relpath:
+                    # Extract base filename: "logs/index_000_gdrcopy.log" -> "index_000_gdrcopy"
+                    log_basename = os.path.basename(log_relpath).replace('.log', '')
+                    log_to_runner_map[log_basename] = runner_label
+
+            print(f"  📋 Loaded runner mappings for {len(log_to_runner_map)} log files")
+        except Exception as e:
+            print(f"  ⚠️  Failed to load results JSON: {e}")
+            print(f"  ℹ️  Will use generic platform suffixes as fallback")
+    else:
+        print(f"  ⚠️  Results file not found: {results_file}")
+        print(f"  ℹ️  Will use generic platform suffixes as fallback")
+
     # Get artifacts for this run (with pagination support)
     print(f"  📋 Checking artifacts for run {run_id}:")
     print(f"    🔑 Using token: {'DASHBOARD_PAT' if os.environ.get('DASHBOARD_PAT') else 'GITHUB_TOKEN'}")
@@ -143,7 +171,7 @@ def process_run_logs(run_id: str, headers: Dict[str, str], repo: str):
                 artifact_name = log_artifact['name']
                 print(f"       📂 Extracting from: {temp_log_dir} (Artifact: {artifact_name})")
 
-                # Determine platform suffix from artifact name
+                # Determine platform suffix from artifact name (fallback)
                 platform_suffix = ""
                 if 'orin' in artifact_name.lower():
                     platform_suffix = "_orin"
@@ -157,7 +185,19 @@ def process_run_logs(run_id: str, headers: Dict[str, str], repo: str):
                         if file.endswith('.log'):
                             src = os.path.join(root, file)
                             base_name, ext = os.path.splitext(file)
-                            unique_file = f"{base_name}{platform_suffix}{ext}"
+
+                            # Try to get actual runner name from results JSON mapping
+                            if base_name in log_to_runner_map:
+                                runner_label = log_to_runner_map[base_name]
+                                # Sanitize runner label for filename (replace special chars)
+                                runner_suffix = '_' + re.sub(r'[^a-zA-Z0-9]', '-', runner_label)
+                                print(f"         🏷️  Using runner label: {runner_label} → suffix: {runner_suffix}")
+                            else:
+                                # Fallback to platform suffix if no mapping found
+                                runner_suffix = platform_suffix
+                                print(f"         ⚠️  No runner mapping for {base_name}, using platform suffix: {runner_suffix}")
+
+                            unique_file = f"{base_name}{runner_suffix}{ext}"
                             dst = os.path.join(run_logs_dir, unique_file)
                             print(f"         📝 Moving log: {src} → {dst}")
                             shutil.move(src, dst)
@@ -204,22 +244,17 @@ def main():
 
     processed_runs = 0
 
-    if triggering_run_id:
-        # Only process the triggering run for efficiency
-        print(f"🎯 Processing logs for triggering run only: {triggering_run_id}")
-        if os.path.exists(f'{runs_dir}/results-{triggering_run_id}.json'):
-            process_run_logs(triggering_run_id, headers, env_vars['repo'])
-            processed_runs = 1
-        else:
-            print(f"⚠️  Triggering run {triggering_run_id} not found in runs directory")
-    else:
-        # Process all runs
-        print(f"📋 Processing logs for all runs in {runs_dir}")
-        for filename in os.listdir(runs_dir):
-            if filename.startswith('results-') and filename.endswith('.json'):
-                run_id = filename.replace('results-', '').replace('.json', '')
-                process_run_logs(run_id, headers, env_vars['repo'])
-                processed_runs += 1
+    # ALWAYS process all historical runs to build complete log history
+    # The "for efficiency" optimization that only processed triggering_run_id was a regression
+    # that broke historical log access - we need logs for ALL runs to be available
+    print(f"📋 Processing logs for all runs in {runs_dir}")
+    print(f"    (Triggered by run: {triggering_run_id or 'manual'})")
+
+    for filename in os.listdir(runs_dir):
+        if filename.startswith('results-') and filename.endswith('.json'):
+            run_id = filename.replace('results-', '').replace('.json', '')
+            process_run_logs(run_id, headers, env_vars['repo'])
+            processed_runs += 1
 
     print(f"\n✅ Completed processing log files for {processed_runs} run(s)")
 

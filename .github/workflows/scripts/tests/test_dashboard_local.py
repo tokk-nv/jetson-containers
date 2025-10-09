@@ -133,13 +133,13 @@ def run_dashboard_scripts(output_path: Path):
                 raise TimeoutError("Log processing timed out")
 
             signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(60)  # 60 second timeout
+            signal.alarm(600)  # 10 minute timeout
 
             process_logs()
             signal.alarm(0)  # Cancel timeout
             print("✅ Log files processed")
         except TimeoutError:
-            print("⚠️ Log processing timed out after 60 seconds - skipping")
+            print("⚠️ Log processing timed out after 10 minutes - skipping")
             print("   Dashboard will still work, but logs might not be organized optimally")
         except Exception as e:
             print(f"⚠️ Log processing failed: {e}")

@@ -143,7 +143,7 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                     health_label = "Mostly Success"
                 elif success_rate >= 50:
                     health_status = "partial"
-                    health_color = "#fd7e14"  # Orange
+                    health_color = "#8b5cf6"  # Purple
                     health_label = "Partial Failure"
                 else:
                     health_status = "poor"
@@ -367,8 +367,8 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
         }}
 
         .marker-dot.partial {{
-            background: #fd7e14;
-            box-shadow: 0 0 0 3px rgba(253, 126, 20, 0.3);
+            background: #8b5cf6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
         }}
 
         .marker-dot.poor {{
@@ -467,7 +467,7 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
 
         .stat-value.perfect {{ color: #28a745; }}
         .stat-value.good {{ color: #ffc107; }}
-        .stat-value.partial {{ color: #fd7e14; }}
+        .stat-value.partial {{ color: #8b5cf6; }}
         .stat-value.poor {{ color: #dc3545; }}
 
         .stat-breakdown {{
@@ -486,7 +486,7 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
         .success-count {{ color: #28a745; }}
         .failed-count {{ color: #dc3545; }}
         .timeout-count {{ color: #ffc107; }}
-        .oom-count {{ color: #fd7e14; }}
+        .oom-count {{ color: #8b5cf6; }}
 
         /* Legacy timeline classes for backward compatibility */
         .timeline-item {{
@@ -618,6 +618,14 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
             word-wrap: break-word;
             font-size: 12px;
             color: #6c757d;
+        }}
+
+        .platform {{
+            font-family: monospace;
+            font-size: 13px;
+            font-weight: 600;
+            color: #2563eb;
+            text-transform: uppercase;
         }}
 
         .runner {{
@@ -798,6 +806,9 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                 <option value="timeout">Timeout</option>
                 <option value="oom_killed">OOM Killed</option>
             </select>
+            <select id="platform-filter" class="filter-select">
+                <option value="">All Platforms</option>
+            </select>
             <select id="runner-filter" class="filter-select">
                 <option value="">All Runners</option>
             </select>
@@ -820,6 +831,7 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                     <tr>
                         <th>Package</th>
                         <th>Tag</th>
+                        <th>Platform</th>
                         <th>Runner</th>
                         <th>Status</th>
                         <th>Duration</th>
@@ -1013,8 +1025,8 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                         {{
                             label: 'OOM',
                             data: chartData.map(d => ({{ x: d.x, y: d.oom, runData: d }})),
-                            backgroundColor: '#fd7e14',
-                            borderColor: '#e8650e',
+                            backgroundColor: '#8b5cf6',
+                            borderColor: '#7c3aed',
                             borderWidth: 1,
                             stack: 'builds'
                         }},
@@ -1055,41 +1067,47 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                             }}
                         }},
                         tooltip: {{
-                            position: 'nearest',  // Use nearest positioning
+                            position: 'nearest',
                             xAlign: function(tooltipItem) {{
-                                // Position tooltip to the right for left-side bars, left for right-side bars
                                 const chart = tooltipItem.chart;
                                 const dataPoint = tooltipItem.tooltip.dataPoints[0];
                                 const barX = dataPoint.element.x;
                                 const chartWidth = chart.width;
-
-                                // If bar is in left half, show tooltip on right
-                                if (barX < chartWidth / 2) {{
-                                    return 'left';  // Tooltip appears to the right of the bar
-                                }} else {{
-                                    return 'right'; // Tooltip appears to the left of the bar
-                                }}
+                                return barX < chartWidth / 2 ? 'left' : 'right';
                             }},
-                            yAlign: 'center',     // Center vertically with the bar
-                            caretPadding: 10,     // Add some space between tooltip and bar
+                            yAlign: 'center',
+                            caretPadding: 10,
+                            displayColors: false,  // Disable color boxes completely
                             callbacks: {{
                                 title: function(context) {{
                                     const runData = context[0].raw.runData;
-                                    return `Run ${{runData.runId}} - ${{runData.x.toLocaleDateString()}} ${{runData.x.toLocaleTimeString()}}`;
-                                }},
-                                afterTitle: function(context) {{
-                                    const runData = context[0].raw.runData;
-                                    return `SHA: ${{runData.sha.substring(0, 8)}}`;
+                                    return [
+                                        `Run ${{runData.runId}}`,
+                                        `${{runData.x.toLocaleDateString()}} ${{runData.x.toLocaleTimeString()}}`,
+                                        `Total Packages: ${{runData.total}}`
+                                    ];
                                 }},
                                 label: function(context) {{
+                                    // Only show on first dataset to avoid duplication
+                                    if (context.datasetIndex !== 0) return null;
+
                                     const runData = context.raw.runData;
                                     const total = runData.total;
-                                    const successRate = total > 0 ? ((runData.success / total) * 100).toFixed(1) : '0.0';
 
+                                    // Calculate percentages
+                                    const successPct = total > 0 ? ((runData.success / total) * 100).toFixed(1) : '0.0';
+                                    const failedPct = total > 0 ? ((runData.failed / total) * 100).toFixed(1) : '0.0';
+                                    const timeoutPct = total > 0 ? ((runData.timeout / total) * 100).toFixed(1) : '0.0';
+                                    const oomPct = total > 0 ? ((runData.oom / total) * 100).toFixed(1) : '0.0';
+                                    const startedPct = total > 0 ? ((runData.started / total) * 100).toFixed(1) : '0.0';
+
+                                    // Return array with all status lines
                                     return [
-                                        `${{context.dataset.label}}: ${{context.parsed.y}}`,
-                                        `Total Packages: ${{total}}`,
-                                        `Success Rate: ${{successRate}}%`
+                                        `🟢 Success: ${{runData.success}} (${{successPct}}%)`,
+                                        `🔴 Failed: ${{runData.failed}} (${{failedPct}}%)`,
+                                        `🟡 Timeout: ${{runData.timeout}} (${{timeoutPct}}%)`,
+                                        `🟣 OOM: ${{runData.oom}} (${{oomPct}}%)`,
+                                        `⚪ Started: ${{runData.started}} (${{startedPct}}%)`
                                     ];
                                 }}
                             }}
@@ -1198,6 +1216,7 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                 currentRun = runId;
 
                 updateStats();
+                populatePlatformFilter();
                 populateRunnerFilter();
                 sortResults();  // Apply default sort (by package) on load
                 renderTable();
@@ -1249,6 +1268,32 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
             document.getElementById('success-rate').textContent = successRate + '%';
         }}
 
+        // Helper function to determine platform from result data (with fallback for historical data)
+        function getPlatformFromResult(result) {{
+            if (result.platform && result.platform !== 'unknown') {{
+                return result.platform;
+            }}
+            // Fallback: infer from runner_label or runner name
+            const runner = (result.runner_label || result.runner || '').toLowerCase();
+            if (runner.startsWith('jat')) return 'thor';
+            if (runner.startsWith('jao')) return 'orin';
+            if (runner === 'orin' || runner === 'thor') return runner;
+            return 'unknown';
+        }}
+
+        function populatePlatformFilter() {{
+            const platforms = [...new Set(allResults.map(r => getPlatformFromResult(r)))].filter(p => p && p !== 'unknown').sort();
+            const select = document.getElementById('platform-filter');
+            select.innerHTML = '<option value="">All Platforms</option>';
+
+            platforms.forEach(platform => {{
+                const option = document.createElement('option');
+                option.value = platform;
+                option.textContent = platform.toUpperCase();
+                select.appendChild(option);
+            }});
+        }}
+
         function populateRunnerFilter() {{
             const runners = [...new Set(allResults.map(r => r.runner_label || r.runner))].sort();
             const select = document.getElementById('runner-filter');
@@ -1265,6 +1310,7 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
         function setupEventListeners() {{
             document.getElementById('search').addEventListener('input', filterResults);
             document.getElementById('status-filter').addEventListener('change', filterResults);
+            document.getElementById('platform-filter').addEventListener('change', filterResults);
             document.getElementById('runner-filter').addEventListener('change', filterResults);
             document.getElementById('sort-by').addEventListener('change', sortResults);
             document.getElementById('run-select').addEventListener('change', function() {{
@@ -1314,6 +1360,7 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
         function filterResults() {{
             const searchTerm = document.getElementById('search').value.toLowerCase();
             const statusFilter = document.getElementById('status-filter').value;
+            const platformFilter = document.getElementById('platform-filter').value;
             const runnerFilter = document.getElementById('runner-filter').value;
 
             filteredResults = allResults.filter(result => {{
@@ -1323,9 +1370,10 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                     (result.failure_point && result.failure_point.toLowerCase().includes(searchTerm));
 
                 const matchesStatus = !statusFilter || result.status === statusFilter;
+                const matchesPlatform = !platformFilter || getPlatformFromResult(result) === platformFilter;
                 const matchesRunner = !runnerFilter || (result.runner_label || result.runner) === runnerFilter;
 
-                return matchesSearch && matchesStatus && matchesRunner;
+                return matchesSearch && matchesStatus && matchesPlatform && matchesRunner;
             }});
 
             currentPage = 1;
@@ -1368,18 +1416,12 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                 if (result.log_relpath) {{
                     // Use actual run ID from the result data
                     const actualRunId = result.run_id || 'current';
-                    // Create runner-specific filename
+                    // Create runner-specific filename using the actual runner label
                     const runnerLabel = result.runner_label || result.runner || 'unknown';
                     const baseFileName = result.log_relpath.replace('logs/', '').replace('.log', '');
-                    let runnerSuffix = '';
 
-                    if (runnerLabel.toLowerCase().includes('orin')) {{
-                        runnerSuffix = '_orin';
-                    }} else if (runnerLabel.toLowerCase().includes('thor')) {{
-                        runnerSuffix = '_thor';
-                    }} else {{
-                        runnerSuffix = '_' + runnerLabel.toLowerCase();
-                    }}
+                    // Sanitize runner label for filename (match Python: re.sub(r'[^a-zA-Z0-9]', '-', runner_label))
+                    const runnerSuffix = '_' + runnerLabel.replace(/[^a-zA-Z0-9]/g, '-');
 
                     // Prefer HTML log files for better viewing experience
                     const uniqueFileNameHtml = baseFileName + runnerSuffix + '.html';
@@ -1391,9 +1433,12 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                     // If needed, we could add a check here, but for now we'll default to HTML
                 }}
 
+                const platformDisplay = getPlatformFromResult(result);
+
                 return '<tr>' +
                     '<td><span class="package-name">' + result.package + '</span></td>' +
                     '<td><span class="tag">' + result.tag + '</span></td>' +
+                    '<td><span class="platform">' + platformDisplay + '</span></td>' +
                     '<td><span class="runner">' + (result.runner_label || result.runner || 'unknown') + '</span></td>' +
                     '<td><span class="status ' + result.status + '">' + result.status + '</span></td>' +
                     '<td><span class="duration">' + formatDuration(result.duration_s) + '</span></td>' +

@@ -4,7 +4,7 @@ on:
   workflow_run:
     workflows: ["Sweep – Build Matrix"]
     types: [completed]
-    branches: [dev]
+    branches: [dev, main]
 
 permissions:
   contents: write
@@ -14,10 +14,29 @@ permissions:
   deployments: write
 
 jobs:
+  debug-trigger:
+    name: Debug Trigger Info
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print workflow_run event details
+        run: |
+          echo "🔍 Workflow Run Trigger Debug Information"
+          echo "========================================"
+          echo "Triggering workflow: ${{ github.event.workflow_run.name }}"
+          echo "Triggering run ID: ${{ github.event.workflow_run.id }}"
+          echo "Conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo "Status: ${{ github.event.workflow_run.status }}"
+          echo "Event: ${{ github.event.workflow_run.event }}"
+          echo "Head branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "Head SHA: ${{ github.event.workflow_run.head_sha }}"
+          echo "========================================"
+
   publish-dashboard:
     name: Publish Dashboard
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure' }}
+    needs: [debug-trigger]
+    # Accept all conclusions - we want to publish dashboard even if builds failed/timed out
+    if: ${{ always() && (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'timed_out' || github.event.workflow_run.conclusion == 'cancelled') }}
 
     steps:
       - name: Checkout repository
@@ -61,25 +80,41 @@ jobs:
             echo "❌ No result files found"
           fi
 
-      - name: Download and process log files for latest run
+      - name: Download and process log files for all historical runs
         if: steps.check-results.outputs.exists == 'true'
         env:
           DASHBOARD_PAT: ${{ secrets.DASHBOARD_PAT }}
           TRIGGERING_RUN_ID: ${{ github.event.workflow_run.id }}
           REPO: NVIDIA-AI-IOT/jetson-containers
         run: |
-          # Process logs for the triggering run
+          # Process logs for ALL historical runs to build complete log history
+          # TRIGGERING_RUN_ID is passed for context but we process all runs
           python3 .github/workflows/scripts/dashboard_process_log_files.py
 
       - name: Convert logs to HTML
         if: steps.check-results.outputs.exists == 'true'
         run: |
-          if [ -d "./logs" ] && [ "$(ls -A ./logs/*.log 2>/dev/null | wc -l)" -gt 0 ]; then
+          # Check for log files in run-specific subdirectories (format: ./logs/run-{id}/*.log)
+          if [ -d "./logs" ] && [ "$(find ./logs -type f -name '*.log' 2>/dev/null | wc -l)" -gt 0 ]; then
             echo "🔄 Converting log files to HTML for better web viewing..."
+            echo "   Found $(find ./logs -type f -name '*.log' 2>/dev/null | wc -l) log files"
+            echo "📂 Log directory structure:"
+            ls -lah ./logs/
+            echo ""
+            echo "📁 Subdirectories and files:"
+            find ./logs -type d | head -10
+            echo ""
             python3 .github/workflows/scripts/log_to_html_converter.py ./logs/
+            echo ""
             echo "✅ Log conversion completed"
+            echo "📊 HTML files created:"
+            find ./logs -name "*.html" -type f | wc -l
+            echo "📋 Sample HTML files:"
+            find ./logs -name "*.html" -type f | head -5
           else
             echo "ℹ️  No log files to convert"
+            echo "🔍 Debug: Checking what exists in ./logs"
+            ls -lah ./logs/ 2>/dev/null || echo "  ./logs directory does not exist"
           fi
 
       - name: Generate dashboard HTML
@@ -106,6 +141,30 @@ jobs:
           enablement: true
         continue-on-error: true
 
+      - name: Download existing logs from GitHub Pages
+        if: steps.check-results.outputs.exists == 'true'
+        continue-on-error: true
+        run: |
+          echo "📥 Downloading existing logs from GitHub Pages to preserve them..."
+          PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+
+          # Create temporary directory for existing logs
+          mkdir -p ./existing-logs
+
+          # Try to download existing logs directory structure
+          # We'll use wget to mirror the logs directory
+          wget --mirror --no-parent --no-host-directories --cut-dirs=1 \
+               --accept="*.log,*.html" --reject="index.html" \
+               -P ./existing-logs \
+               "${PAGES_URL}/logs/" 2>&1 || echo "⚠️ Could not download existing logs (might be first run)"
+
+          if [ -d "./existing-logs/logs" ]; then
+            echo "✅ Downloaded existing logs"
+            ls -la ./existing-logs/logs/
+          else
+            echo "ℹ️ No existing logs found (this might be the first dashboard run)"
+          fi
+
       - name: Prepare Pages directory
         if: steps.check-results.outputs.exists == 'true'
         run: |
@@ -128,14 +187,33 @@ jobs:
             echo "⚠️  No runs directory found, created empty"
           fi
 
-          # Copy logs for latest run
-          if [ -d "./logs" ]; then
-            cp -r logs ./pages/
-            echo "✅ Copied logs directory"
-          else
-            mkdir -p ./pages/logs
-            echo "⚠️  No logs directory found, created empty"
+          # Merge logs: Start with existing logs from Pages, then add/update with new logs
+          mkdir -p ./pages/logs
+
+          # First, copy existing logs from GitHub Pages
+          if [ -d "./existing-logs/logs" ]; then
+            echo "📋 Merging existing logs from GitHub Pages..."
+            cp -r ./existing-logs/logs/* ./pages/logs/ 2>/dev/null || true
+            echo "✅ Copied $(find ./existing-logs/logs -type f 2>/dev/null | wc -l) existing log files"
           fi
+
+          # Then, overlay new logs (will overwrite if run IDs match, preserving old runs)
+          if [ -d "./logs" ]; then
+            echo "📋 Adding new logs for current run..."
+            echo "🔍 Before copy - logs structure:"
+            find ./logs -type d | sort
+            cp -r ./logs/* ./pages/logs/ 2>/dev/null || true
+            echo "✅ Added new log files"
+            echo "🔍 After copy - pages/logs structure:"
+            find ./pages/logs -type d | sort | head -20
+          else
+            echo "⚠️  No new logs directory found"
+          fi
+
+          echo "📊 Total logs after merge: $(find ./pages/logs -type f 2>/dev/null | wc -l) files"
+          echo "📋 By type:"
+          echo "   .log files: $(find ./pages/logs -name '*.log' -type f 2>/dev/null | wc -l)"
+          echo "   .html files: $(find ./pages/logs -name '*.html' -type f 2>/dev/null | wc -l)"
 
           # List what we're uploading
           echo ""

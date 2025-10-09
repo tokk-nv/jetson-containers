@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Visualization Demo - Jetson Containers</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            color: #495057;
+            margin-bottom: 10px;
+        }
+        .description {
+            color: #6c757d;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        #demo3dChart {
+            width: 100%;
+            height: 600px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .instructions {
+            margin-top: 30px;
+            padding: 20px;
+            background: #e8f4f8;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        .instructions ul {
+            line-height: 2;
+        }
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .feature-card {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .feature-card h4 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .status-legend {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 3D Timeline Visualization Demo</h1>
+        <p class="description">
+            This demo shows how the new 3D interactive timeline visualization works for the Jetson Containers build dashboard.
+            The 3D view makes it much easier to see individual build instances and understand patterns across multiple runs.
+        </p>
+
+        <div class="status-legend">
+            <div class="status-item">
+                <div class="status-color" style="background: #28a745;"></div>
+                <span><strong>Success</strong> - Build succeeded</span>
+            </div>
+            <div class="status-item">
+                <div class="status-color" style="background: #dc3545;"></div>
+                <span><strong>Failed</strong> - Build failed</span>
+            </div>
+            <div class="status-item">
+                <div class="status-color" style="background: #ffc107;"></div>
+                <span><strong>Timeout</strong> - Build timed out</span>
+            </div>
+            <div class="status-item">
+                <div class="status-color" style="background: #fd7e14;"></div>
+                <span><strong>OOM</strong> - Out of memory</span>
+            </div>
+            <div class="status-item">
+                <div class="status-color" style="background: #6c757d;"></div>
+                <span><strong>Started</strong> - Build in progress</span>
+            </div>
+        </div>
+
+        <div id="demo3dChart"></div>
+
+        <div class="instructions">
+            <h3>🎮 How to Interact</h3>
+            <ul>
+                <li><strong>Rotate:</strong> Click and drag to rotate the 3D view</li>
+                <li><strong>Zoom:</strong> Scroll up/down to zoom in/out</li>
+                <li><strong>Pan:</strong> Right-click and drag to move the view</li>
+                <li><strong>Click Bars:</strong> Click on any bar to see which run it represents</li>
+                <li><strong>Hover:</strong> Hover over bars to see detailed statistics</li>
+                <li><strong>Reset View:</strong> Click the home icon in the toolbar to reset camera</li>
+            </ul>
+        </div>
+
+        <div class="feature-list">
+            <div class="feature-card">
+                <h4>✨ Better Visibility</h4>
+                <p>Each status type (Success, Failed, Timeout, etc.) is on a separate layer, making individual instances easy to see.</p>
+            </div>
+            <div class="feature-card">
+                <h4>🔄 Interactive Rotation</h4>
+                <p>Rotate the view to see data from any angle. Focus on specific status types or time periods.</p>
+            </div>
+            <div class="feature-card">
+                <h4>🎯 Click to Navigate</h4>
+                <p>Click on any bar to jump directly to that run's detailed results and logs.</p>
+            </div>
+            <div class="feature-card">
+                <h4>📊 Clear Patterns</h4>
+                <p>Easily identify trends, spikes in failures, or improvements over time.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Demo data - simulating 15 build runs
+        const demoData = [];
+        const startDate = new Date('2025-10-01');
+        
+        for (let i = 0; i < 15; i++) {
+            const date = new Date(startDate);
+            date.setDate(date.getDate() + i);
+            
+            // Simulate varying build results
+            const total = 50;
+            const success = Math.floor(30 + Math.random() * 15);
+            const failed = Math.floor(Math.random() * 10);
+            const timeout = Math.floor(Math.random() * 5);
+            const oom = Math.floor(Math.random() * 3);
+            const started = total - success - failed - timeout - oom;
+            
+            demoData.push({
+                date: date,
+                runId: `run-${12345 + i}`,
+                success: success,
+                failed: failed,
+                timeout: timeout,
+                oom: oom,
+                started: Math.max(0, started),
+                total: total,
+                sha: `abc${i}def${i}`
+            });
+        }
+
+        // Create traces for each status type
+        const successTrace = {
+            type: 'bar',
+            x: demoData.map(d => d.date.toLocaleDateString()),
+            y: demoData.map(() => 'Success'),
+            z: demoData.map(d => d.success),
+            marker: {
+                color: '#28a745',
+                line: {
+                    color: '#1e7e34',
+                    width: 1
+                }
+            },
+            name: 'Success',
+            text: demoData.map(d => 
+                `Run: ${d.runId}<br>` +
+                `Date: ${d.date.toLocaleDateString()}<br>` +
+                `SHA: ${d.sha.substring(0, 8)}<br>` +
+                `Success: ${d.success}/${d.total}`
+            ),
+            hoverinfo: 'text',
+            customdata: demoData.map(d => d.runId)
+        };
+
+        const failedTrace = {
+            type: 'bar',
+            x: demoData.map(d => d.date.toLocaleDateString()),
+            y: demoData.map(() => 'Failed'),
+            z: demoData.map(d => d.failed),
+            marker: {
+                color: '#dc3545',
+                line: {
+                    color: '#c82333',
+                    width: 1
+                }
+            },
+            name: 'Failed',
+            text: demoData.map(d => 
+                `Run: ${d.runId}<br>` +
+                `Date: ${d.date.toLocaleDateString()}<br>` +
+                `SHA: ${d.sha.substring(0, 8)}<br>` +
+                `Failed: ${d.failed}/${d.total}`
+            ),
+            hoverinfo: 'text',
+            customdata: demoData.map(d => d.runId)
+        };
+
+        const timeoutTrace = {
+            type: 'bar',
+            x: demoData.map(d => d.date.toLocaleDateString()),
+            y: demoData.map(() => 'Timeout'),
+            z: demoData.map(d => d.timeout),
+            marker: {
+                color: '#ffc107',
+                line: {
+                    color: '#e0a800',
+                    width: 1
+                }
+            },
+            name: 'Timeout',
+            text: demoData.map(d => 
+                `Run: ${d.runId}<br>` +
+                `Date: ${d.date.toLocaleDateString()}<br>` +
+                `SHA: ${d.sha.substring(0, 8)}<br>` +
+                `Timeout: ${d.timeout}/${d.total}`
+            ),
+            hoverinfo: 'text',
+            customdata: demoData.map(d => d.runId)
+        };
+
+        const oomTrace = {
+            type: 'bar',
+            x: demoData.map(d => d.date.toLocaleDateString()),
+            y: demoData.map(() => 'OOM'),
+            z: demoData.map(d => d.oom),
+            marker: {
+                color: '#fd7e14',
+                line: {
+                    color: '#e8650e',
+                    width: 1
+                }
+            },
+            name: 'OOM',
+            text: demoData.map(d => 
+                `Run: ${d.runId}<br>` +
+                `Date: ${d.date.toLocaleDateString()}<br>` +
+                `SHA: ${d.sha.substring(0, 8)}<br>` +
+                `OOM: ${d.oom}/${d.total}`
+            ),
+            hoverinfo: 'text',
+            customdata: demoData.map(d => d.runId)
+        };
+
+        const startedTrace = {
+            type: 'bar',
+            x: demoData.map(d => d.date.toLocaleDateString()),
+            y: demoData.map(() => 'Started'),
+            z: demoData.map(d => d.started),
+            marker: {
+                color: '#6c757d',
+                line: {
+                    color: '#5a6268',
+                    width: 1
+                }
+            },
+            name: 'Started',
+            text: demoData.map(d => 
+                `Run: ${d.runId}<br>` +
+                `Date: ${d.date.toLocaleDateString()}<br>` +
+                `SHA: ${d.sha.substring(0, 8)}<br>` +
+                `Started: ${d.started}/${d.total}`
+            ),
+            hoverinfo: 'text',
+            customdata: demoData.map(d => d.runId)
+        };
+
+        const traces = [successTrace, failedTrace, timeoutTrace, oomTrace, startedTrace];
+
+        const layout = {
+            title: {
+                text: '3D Build Status Timeline - Interactive Demo',
+                font: { size: 20, color: '#495057' }
+            },
+            scene: {
+                xaxis: {
+                    title: 'Run Date',
+                    titlefont: { size: 14 },
+                    tickangle: -45
+                },
+                yaxis: {
+                    title: 'Status Type',
+                    titlefont: { size: 14 },
+                    categoryorder: 'array',
+                    categoryarray: ['Success', 'Failed', 'Timeout', 'OOM', 'Started']
+                },
+                zaxis: {
+                    title: 'Package Count',
+                    titlefont: { size: 14 }
+                },
+                camera: {
+                    eye: { x: 1.5, y: 1.5, z: 1.3 },
+                    center: { x: 0, y: 0, z: 0 }
+                }
+            },
+            showlegend: true,
+            legend: {
+                x: 0.85,
+                y: 0.95,
+                bgcolor: 'rgba(255, 255, 255, 0.9)',
+                bordercolor: '#dee2e6',
+                borderwidth: 2
+            },
+            margin: { l: 0, r: 0, b: 0, t: 60 },
+            hovermode: 'closest'
+        };
+
+        const config = {
+            responsive: true,
+            displayModeBar: true,
+            displaylogo: false,
+            modeBarButtonsToRemove: ['toImage'],
+            modeBarButtonsToAdd: [
+                {
+                    name: 'Reset View',
+                    icon: Plotly.Icons.home,
+                    click: function(gd) {
+                        Plotly.relayout(gd, {
+                            'scene.camera.eye': { x: 1.5, y: 1.5, z: 1.3 },
+                            'scene.camera.center': { x: 0, y: 0, z: 0 }
+                        });
+                    }
+                }
+            ]
+        };
+
+        Plotly.newPlot('demo3dChart', traces, layout, config);
+
+        // Add click handler
+        document.getElementById('demo3dChart').on('plotly_click', function(data) {
+            if (data.points && data.points.length > 0) {
+                const runId = data.points[0].customdata;
+                alert(`You clicked on ${runId}!\n\nIn the real dashboard, this would load detailed results for this run.`);
+            }
+        });
+
+        console.log('Demo 3D chart initialized with', demoData.length, 'runs');
+    </script>
+</body>
+</html>
+
