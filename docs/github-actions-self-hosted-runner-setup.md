@@ -105,7 +105,7 @@ $USER ALL=(ALL) NOPASSWD: /usr/bin/apt-get, /usr/bin/ln, /bin/rm -rf /home/jetso
 >
 > ```bash
 > sudo tee /etc/sudoers.d/jetson-actions >/dev/null <<EOF
-> $USER ALL=(ALL) NOPASSWD: /usr/bin/apt-get, /usr/bin/ln, /bin/rm -rf /home/jetson/actions-runner/_work/*, /bin/chmod -R /> home/jetson/actions-runner/_work/*, /bin/chown -R /home/jetson/actions-runner/_work/*
+> $USER ALL=(ALL) NOPASSWD: /usr/bin/apt-get, /usr/bin/ln, /bin/rm -rf /home/jetson/actions-runner/_work/*, /bin/chmod -R /home/jetson/actions-runner/_work/*, /bin/chown -R /home/jetson/actions-runner/_work/*
 > EOF
 > ```
 
