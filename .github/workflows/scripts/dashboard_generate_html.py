@@ -85,6 +85,11 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
     current_sha = current_results[0]['sha'] if current_results else 'unknown'
     current_timestamp = current_run['timestamp'] if current_run else 0
 
+    # Get Publish Dashboard workflow run info for the footer
+    # This shows which "Publish Dashboard" workflow generated this page
+    publish_run_id = os.environ.get('PUBLISH_RUN_ID', 'unknown')
+    publish_run_url = os.environ.get('PUBLISH_RUN_URL', '#')
+
     # Debug: Show log_relpath values from current results
     print(f"🔍 Debug: Current results log_relpath values:")
     for i, result in enumerate(current_results[:3]):
@@ -636,7 +641,7 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
             background: linear-gradient(135deg, #059669 0%, #10a0b9 100%);
             color: white;
         }}
-        
+
         .platform-thor {{
             background: linear-gradient(135deg, #3a3ded 0%, #791d95 100%);
             color: white;
@@ -872,7 +877,7 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
 
         <div class="footer">
             <p>Generated on <span class="timestamp-display" data-timestamp="{current_timestamp}"></span></p>
-            <p>Run ID: <a href="{current_run_url}" target="_blank">{current_run_id}</a> | SHA: {current_sha[:8]}</p>
+            <p>Run ID: <a href="{publish_run_url}" target="_blank">{publish_run_id}</a> | SHA: {current_sha[:8]}</p>
         </div>
     </div>
 
