@@ -1,11 +1,12 @@
-name: VLLM dev branch GH200
+name: VLLM dev branch GH200 (DISABLED - manual only)
 
 on:
-  push:
-    branches: [ dev ]
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches: [ dev ]
+  # Disabled automatic triggers - only manual workflow_dispatch allowed
+  # push:
+  #   branches: [ dev ]
+  # pull_request:
+  #   types: [opened, synchronize, reopened]
+  #   branches: [ dev ]
   workflow_dispatch:
     inputs:
       fork_repo:
