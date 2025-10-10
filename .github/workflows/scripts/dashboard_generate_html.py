@@ -621,11 +621,30 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
         }}
 
         .platform {{
-            font-family: monospace;
-            font-size: 13px;
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 12px;
             font-weight: 600;
-            color: #2563eb;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+
+        .platform-orin {{
+            background: linear-gradient(135deg, #059669 0%, #10a0b9 100%);
+            color: white;
+        }}
+        
+        .platform-thor {{
+            background: linear-gradient(135deg, #3a3ded 0%, #791d95 100%);
+            color: white;
+        }}
+
+        .platform-unknown {{
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+            color: white;
         }}
 
         .runner {{
@@ -814,6 +833,7 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
             </select>
             <select id="sort-by" class="filter-select">
                 <option value="package">Sort by Package</option>
+                <option value="platform">Sort by Platform</option>
                 <option value="status">Sort by Status</option>
                 <option value="duration_s">Sort by Duration</option>
                 <option value="timestamp">Sort by Time</option>
@@ -833,7 +853,7 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                         <th>Tag</th>
                         <th>Platform</th>
                         <th>Runner</th>
-                        <th>Status</th>
+                        <th style="text-align: left;">Status</th>
                         <th>Duration</th>
                         <th>Failure Point</th>
                         <th>Log</th>
@@ -1387,6 +1407,10 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                 switch (sortBy) {{
                     case 'package':
                         return a.package.localeCompare(b.package);
+                    case 'platform':
+                        const platformA = getPlatformFromResult(a);
+                        const platformB = getPlatformFromResult(b);
+                        return platformA.localeCompare(platformB);
                     case 'status':
                         return a.status.localeCompare(b.status);
                     case 'duration_s':
@@ -1434,13 +1458,14 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                 }}
 
                 const platformDisplay = getPlatformFromResult(result);
+                const platformClass = 'platform platform-' + platformDisplay.toLowerCase();
 
                 return '<tr>' +
                     '<td><span class="package-name">' + result.package + '</span></td>' +
                     '<td><span class="tag">' + result.tag + '</span></td>' +
-                    '<td><span class="platform">' + platformDisplay + '</span></td>' +
+                    '<td><span class="' + platformClass + '">' + platformDisplay + '</span></td>' +
                     '<td><span class="runner">' + (result.runner_label || result.runner || 'unknown') + '</span></td>' +
-                    '<td><span class="status ' + result.status + '">' + result.status + '</span></td>' +
+                    '<td style="text-align: left;"><span class="status ' + result.status + '">' + result.status + '</span></td>' +
                     '<td><span class="duration">' + formatDuration(result.duration_s) + '</span></td>' +
                     '<td><span class="failure-point">' + result.failure_point + '</span></td>' +
                     '<td>' +
