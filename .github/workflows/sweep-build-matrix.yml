@@ -172,6 +172,14 @@ jobs:
           fi
           echo "=== END DEBUG ==="
 
+      - name: Runner Information
+        run: |
+          echo "=== 🖥️ RUNNER INFORMATION ==="
+          echo "Runner Name: ${RUNNER_NAME}"
+          echo "Hostname: $(hostname)"
+          echo "Platform: ${{ matrix.platform }}"
+          echo "=== END RUNNER INFO ==="
+
       - name: Pre-checkout cleanup (discover)
         run: |
           echo "=== Pre-checkout Cleanup (discover) ==="
@@ -286,9 +294,29 @@ jobs:
       - name: List all packages
         id: list
         run: |
-          echo "Running: ./build.sh --list"
-          ./build.sh --list | sed '/^\s*$/d' > all_packages.txt
-          echo "Repo total: $(wc -l < all_packages.txt | tr -d ' ')"
+          echo "Running: ./build.sh --list (with 5 minute timeout)"
+          set -o pipefail  # Fail if build.sh fails, even when piped to sed
+
+          # Add timeout to prevent hanging (5 minutes should be plenty)
+          if ! timeout 300 ./build.sh --list | sed '/^\s*$/d' > all_packages.txt; then
+            echo "ERROR: build.sh --list failed or timed out after 5 minutes"
+            echo "This may indicate a transient issue. Consider re-running the workflow."
+            exit 1
+          fi
+
+          LINE_COUNT=$(wc -l < all_packages.txt | tr -d ' ')
+          echo "Repo total: $LINE_COUNT"
+
+          # Validate we got reasonable output (at least 100 lines expected)
+          if [ "$LINE_COUNT" -lt 100 ]; then
+            echo "⚠️  WARNING: Only $LINE_COUNT lines detected, expected 500+. Output may be truncated!"
+            echo "This could indicate build.sh --list failed or timed out."
+            echo "Full output:"
+            cat all_packages.txt
+            echo ""
+            echo "ERROR: build.sh --list produced insufficient output ($LINE_COUNT lines)"
+            exit 1
+          fi
 
           echo "DEBUG: build.sh --list output:"
           cat -n all_packages.txt
@@ -387,6 +415,15 @@ jobs:
                   print(f"  Invalid {i+1}: {repr(invalid_pkg)} (len={len(invalid_pkg)})")
               if len(invalid_pkgs) > 10:
                   print(f"  ... and {len(invalid_pkgs) - 10} more invalid packages")
+
+          # Early validation: Check if we have any valid packages at all
+          if len(all_valid) == 0:
+              print("ERROR: No valid packages found in all_packages.txt!")
+              print(f"Total lines read: {total_lines}, all were filtered as invalid.")
+              print("This likely means ./build.sh --list failed or produced incomplete output.")
+              print("Raw output preview (first 1000 chars):")
+              print(pathlib.Path("all_packages.txt").read_text()[:1000])
+              raise SystemExit(1)
 
           # First apply subset filtering
           if mode == "all":
@@ -681,12 +718,15 @@ jobs:
     steps:
       - name: Print runner info
         run: |
+          echo "=== 🖥️ RUNNER INFORMATION ==="
           echo "Runner name: ${RUNNER_NAME:-unknown}"
           echo "Runner OS: ${RUNNER_OS:-unknown}"
           echo "Runner arch: ${RUNNER_ARCH:-unknown}"
+          echo "Hostname: $(hostname)"
           echo "Matrix platform: ${{ matrix.platform }}"
           echo "Job: Build chunk #${{ matrix.index }} on ${{ matrix.platform }}"
           echo "Start time: $(date -u)"
+          echo "=== END RUNNER INFO ==="
 
       - name: Pre-checkout cleanup
         run: |

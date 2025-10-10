@@ -538,11 +538,15 @@ def _get_platform_architecture():
             else:
                 return os.environ.get('CUDA_ARCH', f"{TEGRA}-{host_arch}")
         except subprocess.TimeoutExpired:
-            # nvidia-smi took too long - this indicates a runner issue
-            raise RuntimeError(
-                "nvidia-smi command timed out after 10 seconds. "
-                "If this happens on your runner, please consider disabling this runner."
+            # nvidia-smi took too long - fall back to default architecture
+            # This can happen on runners with driver/hardware issues
+            import sys
+            print(
+                "WARNING: nvidia-smi command timed out after 10 seconds. "
+                "Falling back to default architecture. This may indicate a runner issue.",
+                file=sys.stderr
             )
+            return os.environ.get('CUDA_ARCH', f"{TEGRA}-{host_arch}")
         except Exception as e:
             # Fall back to tegra-aarch64 on other errors (driver not found, etc.)
             return os.environ.get('CUDA_ARCH', f"{TEGRA}-{host_arch}")
