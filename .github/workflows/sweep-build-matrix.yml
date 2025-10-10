@@ -458,9 +458,18 @@ jobs:
 
           pkgs = valid_pkgs
           if not pkgs:
-            print("ERROR: No valid packages found in build.sh --list output")
-            print("Raw output preview:")
-            print(pathlib.Path("all_packages.txt").read_text()[:500])
+            print(f"ERROR: No packages matched the filter criteria!")
+            print(f"Filter mode: {mode!r}, value: {value!r}")
+            print(f"Total valid packages available: {len(all_valid)}")
+            if mode == "regex":
+                print(f"❌ The regex '{value}' matched 0 packages.")
+                print(f"💡 Hint: Use ^[e-n] to match packages starting with letters e through n")
+                print(f"        (not ^(e-n) which matches literal 'e-n' string)")
+            elif mode == "prefix":
+                print(f"❌ No packages start with '{value}'")
+            print(f"\nFirst 10 available packages:")
+            for pkg in sorted(all_valid)[:10]:
+                print(f"  - {pkg}")
             raise SystemExit(1)
 
           if exclude_builders:
