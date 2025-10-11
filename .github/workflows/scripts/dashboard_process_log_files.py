@@ -186,16 +186,21 @@ def process_run_logs(run_id: str, headers: Dict[str, str], repo: str):
                             src = os.path.join(root, file)
                             base_name, ext = os.path.splitext(file)
 
-                            # Try to get actual runner name from results JSON mapping
-                            if base_name in log_to_runner_map:
+                            # Prioritize platform suffix from artifact name (more reliable)
+                            # because log_to_runner_map can have collisions when same package
+                            # is built on multiple platforms
+                            if platform_suffix:
+                                runner_suffix = platform_suffix
+                                print(f"         🏷️  Using platform from artifact name: {platform_suffix}")
+                            elif base_name in log_to_runner_map:
                                 runner_label = log_to_runner_map[base_name]
                                 # Sanitize runner label for filename (replace special chars)
                                 runner_suffix = '_' + re.sub(r'[^a-zA-Z0-9]', '-', runner_label)
-                                print(f"         🏷️  Using runner label: {runner_label} → suffix: {runner_suffix}")
+                                print(f"         🏷️  Using runner label from mapping: {runner_label} → suffix: {runner_suffix}")
                             else:
-                                # Fallback to platform suffix if no mapping found
-                                runner_suffix = platform_suffix
-                                print(f"         ⚠️  No runner mapping for {base_name}, using platform suffix: {runner_suffix}")
+                                # No platform info available
+                                runner_suffix = ""
+                                print(f"         ⚠️  No platform info available for {base_name}")
 
                             unique_file = f"{base_name}{runner_suffix}{ext}"
                             dst = os.path.join(run_logs_dir, unique_file)

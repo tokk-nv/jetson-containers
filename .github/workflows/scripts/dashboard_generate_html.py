@@ -97,6 +97,36 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
         runner = result.get('runner_label', result.get('runner', 'unknown'))
         print(f"  {i+1}. {result['package']} ({runner}): {log_path}")
 
+    # Check which log files actually exist to prevent 404 links
+    print(f"\n📂 Checking existence of log files...")
+    import re
+    logs_missing = 0
+    logs_found = 0
+
+    for run in available_runs:
+        run_id = run['run_id']
+        for result in run.get('results', []):
+            if result.get('log_relpath'):
+                # Reconstruct the expected log filename (matching JavaScript URL generation logic)
+                runner_label = result.get('runner_label') or result.get('runner') or 'unknown'
+                base_file_name = result['log_relpath'].replace('logs/', '').replace('.log', '')
+                runner_suffix = '_' + re.sub(r'[^a-zA-Z0-9]', '-', runner_label)
+
+                # Check for both HTML and log files
+                log_file_html = f'./logs/run-{run_id}/{base_file_name}{runner_suffix}.html'
+                log_file_log = f'./logs/run-{run_id}/{base_file_name}{runner_suffix}.log'
+
+                if os.path.exists(log_file_html) or os.path.exists(log_file_log):
+                    result['log_exists'] = True
+                    logs_found += 1
+                else:
+                    result['log_exists'] = False
+                    logs_missing += 1
+            else:
+                result['log_exists'] = False
+
+    print(f"📊 Log file check: {logs_found} found, {logs_missing} missing")
+
     # Generate timeline items for available runs (mathematical axis approach)
     timeline_items = []
 
@@ -1219,26 +1249,24 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                 document.getElementById('results-table').style.display = 'none';
                 document.getElementById('error').style.display = 'none';
 
-                let response;
+                // Use embedded availableRuns data instead of fetching JSON files
+                // This ensures log_exists field is available
+                let targetRun;
                 if (runId === 'current') {{
-                    // For 'current', load the first (newest) run
-                    const newestRun = availableRuns[0];
-                    if (newestRun) {{
-                        response = await fetch('runs/results-' + newestRun.run_id + '.json');
-                    }} else {{
-                        throw new Error('No runs available');
-                    }}
+                    targetRun = availableRuns[0];
                 }} else {{
-                    response = await fetch('runs/results-' + runId + '.json');
+                    targetRun = availableRuns.find(r => r.run_id === runId);
                 }}
 
-                if (!response.ok) {{
-                    throw new Error('Failed to load results for run ' + runId);
+                if (!targetRun) {{
+                    throw new Error('Run ' + runId + ' not found');
                 }}
 
-                allResults = await response.json();
+                // Using embedded data ensures log_exists field is available
+
+                allResults = targetRun.results;
                 filteredResults = [...allResults];
-                currentRun = runId;
+                currentRun = targetRun.run_id;
 
                 updateStats();
                 populatePlatformFilter();
@@ -1437,12 +1465,12 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
             const end = start + itemsPerPage;
             const pageResults = filteredResults.slice(start, end);
 
-            tbody.innerHTML = pageResults.map(result => {{
+            tbody.innerHTML = pageResults.map((result, index) => {{
                 // Generate log file path based on current run and log_relpath
                 const githubUrl = result.run_url;
                 let logUrl = githubUrl; // Fallback to GitHub Actions
 
-                if (result.log_relpath) {{
+                if (result.log_relpath && result.log_exists) {{
                     // Use actual run ID from the result data
                     const actualRunId = result.run_id || 'current';
                     // Create runner-specific filename using the actual runner label
@@ -1458,8 +1486,6 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
 
                     // Try HTML first, fallback to .log
                     logUrl = 'logs/run-' + actualRunId + '/' + uniqueFileNameHtml;
-                    // Note: We assume HTML files exist since we generate them in the workflow
-                    // If needed, we could add a check here, but for now we'll default to HTML
                 }}
 
                 const platformDisplay = getPlatformFromResult(result);
@@ -1475,7 +1501,7 @@ def generate_dashboard_html(available_runs: List[Dict[str, Any]]) -> str:
                     '<td><span class="failure-point">' + result.failure_point + '</span></td>' +
                     '<td>' +
                         '<a href="' + githubUrl + '" target="_blank" title="View GitHub Actions Log">GitHub Actions</a>' +
-                        (result.log_relpath ? ' | <a href="' + logUrl + '" target="_blank" title="View Enhanced HTML Log with Colors and Formatting">Enhanced Log</a>' : '') +
+                        (result.log_relpath && result.log_exists ? ' | <a href="' + logUrl + '" target="_blank" title="View Enhanced HTML Log with Colors and Formatting">Enhanced Log</a>' : '') +
                     '</td>' +
                 '</tr>';
             }}).join('');
