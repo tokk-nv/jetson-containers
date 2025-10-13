@@ -118,7 +118,7 @@ CUDNN_VERSION = Version(cuda_stack_args()['CUDNN_VERSION'])
 TENSORRT_VERSION = Version(cuda_stack_args()['TENSORRT_VERSION'])
 
 
-def cuda_stack(name, with_tensorrt=False, minimal=False, requires=None):
+def cuda_stack(name, with_tensorrt=False, minimal=False, requires=None, default=False):
     """
     Generate a consolidated CUDA stack package that installs multiple libraries in ONE RUN.
     This avoids Docker's layer limits by consolidating cudnn, nccl, tensorrt, etc. into one layer.
@@ -131,6 +131,9 @@ def cuda_stack(name, with_tensorrt=False, minimal=False, requires=None):
     """
     pkg = package.copy()
     pkg['name'] = name
+
+    if default:
+        pkg['alias'] = name.split(':')[0]
 
     # Get base build args
     build_args = cuda_stack_args()
@@ -171,7 +174,8 @@ if IS_TEGRA and IS_CONFIG:
         cuda_stack('cudastack:standard',
                    with_tensorrt=True,
                    minimal=False,
-                   requires='>=36'),
+                   requires='>=36',
+                   default=True),
     ]
 
 elif IS_SBSA and IS_CONFIG:
@@ -185,7 +189,8 @@ elif IS_SBSA and IS_CONFIG:
         cuda_stack('cudastack:standard',
                    with_tensorrt=True,
                    minimal=False,
-                   requires='aarch64'),
+                   requires='aarch64',
+                   default=True),
     ]
 elif IS_CONFIG:
     # x86_64
@@ -198,5 +203,7 @@ elif IS_CONFIG:
         cuda_stack('cudastack:standard',
                    with_tensorrt=True,
                    minimal=False,
-                   requires='x86_64'),
+                   requires='x86_64',
+                   default=True),
     ]
+
