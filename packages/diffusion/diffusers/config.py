@@ -1,4 +1,3 @@
-
 def diffusers(version, requires=None, default=False):
     pkg = package.copy()
 
@@ -7,9 +6,12 @@ def diffusers(version, requires=None, default=False):
 
     pkg['name'] = f'diffusers:{version}'
 
-    pkg['build_args'] = {
-        'DIFFUSERS_VERSION': version,
-    }
+    if version == 'main':
+        pkg['build_args'] = {}
+    else:
+        pkg['build_args'] = {
+            'DIFFUSERS_VERSION': version,
+        }
 
     builder = pkg.copy()
 
@@ -23,5 +25,7 @@ def diffusers(version, requires=None, default=False):
     return pkg, builder
 
 package = [
-    diffusers('0.36.0', default=True),
+    diffusers('0.36.0', default=False),
+    diffusers('main', default=True), # we force build main until the next diffusers release
 ]
+
