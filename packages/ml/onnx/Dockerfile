@@ -14,7 +14,8 @@ ARG ONNX_VERSION
 RUN uv pip install onnx || \
     uv pip install git+https://github.com/onnx/onnx@${ONNX_VERSION} && \
     uv pip show onnx && \
-    python3 -c 'import onnx; print(onnx.__version__)'
+    python3 -c 'import onnx; print(onnx.__version__)' && \
+    ${PIP_APPEND_CONSTRAINT} onnx
 
 # error introduced by https://github.com/onnx/onnx/pull/5777 results in python protobuf mismatch
 # https://github.com/onnx/onnx/blob/6ff456c1179c34827ad910e5601cb1486822d800/CMakeLists.txt#L249

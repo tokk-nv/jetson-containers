@@ -15,3 +15,5 @@ if [ $? = 0 ]; then
     uv pip install --force-reinstall numba
   fi
 fi
+
+${PIP_APPEND_CONSTRAINT} numpy

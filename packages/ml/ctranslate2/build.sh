@@ -30,3 +30,5 @@ uv pip install --force-reinstall /opt/ctranslate2*.whl
 
 twine upload --verbose /opt/ctranslate2*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
 tarpack upload ctranslate2-${CTRANSLATE_VERSION} ${install_dir} || echo "failed to upload tarball"
+
+${PIP_APPEND_CONSTRAINT} ctranslate2

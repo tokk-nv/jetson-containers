@@ -115,3 +115,5 @@ python3 -c 'import torch; print(f"PyTorch {torch.__version__} installed successf
 python3 -c 'import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.backends.cudnn.version()); print(torch.__config__.show());'
 
 twine upload --verbose /opt/torch*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} torch

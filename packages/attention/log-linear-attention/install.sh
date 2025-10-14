@@ -7,3 +7,5 @@ if [ "$FORCE_BUILD" == "on" ]; then
 fi
 
 uv pip install hattention==${LOG_LINEAR_ATTN_VERSION}
+
+${PIP_APPEND_CONSTRAINT} hattention

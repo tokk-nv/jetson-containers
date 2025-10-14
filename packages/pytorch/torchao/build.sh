@@ -21,3 +21,5 @@ uv pip install /opt/torchao*.whl
 uv pip show torchao && python3 -c 'import torchao; print(torchao.__version__);'
 
 twine upload --verbose /opt/torchao*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} torchao

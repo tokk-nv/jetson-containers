@@ -11,3 +11,5 @@ uv pip install piper-tts==${PIPER_VERSION}
 
 # make sure it loads
 uv pip show piper-tts
+
+${PIP_APPEND_CONSTRAINT} piper-tts

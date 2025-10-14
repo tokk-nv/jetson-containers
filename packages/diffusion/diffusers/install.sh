@@ -8,3 +8,5 @@ fi
 
 uv pip install diffusers==${DIFFUSERS_VERSION} || \
 	uv pip install diffusers==${DIFFUSERS_VERSION}.dev0
+
+${PIP_APPEND_CONSTRAINT} diffusers

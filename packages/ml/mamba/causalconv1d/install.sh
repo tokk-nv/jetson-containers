@@ -8,3 +8,5 @@ fi
 
 uv pip install causal_conv1d==${CASUALCONV1D_VERSION} || \
 uv pip install causal_conv1d==${CASUALCONV1D_VERSION_SPEC}
+
+${PIP_APPEND_CONSTRAINT} causal_conv1d

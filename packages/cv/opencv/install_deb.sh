@@ -73,3 +73,4 @@ if [ $ARCH = "aarch64" ]; then
 	ln -sfnv /usr/lib/python${PYTHON3_VERSION}/dist-packages/cv2 $local_python_path
 fi
 
+${PIP_APPEND_CONSTRAINT} opencv-contrib-python

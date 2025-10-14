@@ -8,3 +8,5 @@ fi
 
 uv pip install torchao==${TORCHAO_VERSION} || \
 uv pip install --pre "torchao>=${TORCHAO_VERSION}.dev,<=${TORCHAO_VERSION}"
+
+${PIP_APPEND_CONSTRAINT} torchao

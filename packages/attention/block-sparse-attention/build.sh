@@ -51,3 +51,5 @@ cd /
 uv pip install /opt/block_sparse_attn/wheels/block_sparse_attn*.whl
 
 twine upload /opt/block_sparse_attn/wheels/block_sparse_attn*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} block_sparse_attn

@@ -44,3 +44,5 @@ python3 -c 'import onnxruntime_genai; print(onnxruntime_genai.__version__);'
 
 twine upload --verbose /opt/onnxruntime_genai*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
 tarpack upload onnxruntime_genai-${ONNXRUNTIME_GENAI_VERSION} ${install_dir} || echo "failed to upload tarball"
+
+${PIP_APPEND_CONSTRAINT} onnxruntime_genai

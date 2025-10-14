@@ -143,3 +143,5 @@ cp *.deb /tmp/debs/
 
 tarpack upload OpenCV-${OPENCV_VERSION} /tmp/debs/ || echo "failed to upload tarball"
 echo "installed" > "$TMP/.opencv"
+
+${PIP_APPEND_CONSTRAINT} opencv-contrib-python

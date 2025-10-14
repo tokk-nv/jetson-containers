@@ -8,3 +8,5 @@ fi
 
 uv pip install pycuda==${PYCUDA_VERSION}
 uv pip show pycuda && python3 -c 'import pycuda; print(pycuda.VERSION_TEXT)'
+
+${PIP_APPEND_CONSTRAINT} pycuda

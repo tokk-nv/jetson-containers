@@ -8,6 +8,11 @@ set -euxo pipefail
 : "${PYTHON_VERSION:?You must define PYTHON_VERSION, e.g., 3.12}"
 PIP_INDEX_URL="${PIP_INDEX_URL:-https://pypi.org/simple}"
 
+# create global pip constraints file for entire build
+mkdir -p "$(dirname -- "$PIP_CONSTRAINT")"
+: > "$PIP_CONSTRAINT"
+echo "Created PIP constraint file located at $PIP_CONSTRAINT"
+
 apt-get update
 apt-get install -y --no-install-recommends \
   curl ca-certificates

@@ -7,3 +7,6 @@ if [ "$FORCE_BUILD" == "on" ]; then
 fi
 
 uv pip install xformers==${XFORMERS_VERSION}
+
+
+${PIP_APPEND_CONSTRAINT} xformers

@@ -27,3 +27,5 @@ cd /
 uv pip install /opt/paraattention/wheels/para_attn*.whl
 
 twine upload --verbose /opt/paraattention/wheels/para_attn*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} para-attn

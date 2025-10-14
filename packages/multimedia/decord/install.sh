@@ -7,3 +7,5 @@ if [ "$FORCE_BUILD" == "on" ]; then
 fi
 
 uv pip install decord2==${DECORD_VERSION}
+
+${PIP_APPEND_CONSTRAINT} decord2

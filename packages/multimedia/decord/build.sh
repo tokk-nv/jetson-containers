@@ -22,3 +22,5 @@ cd /opt/decord
 
 # Optionally upload to a repository using Twine
 twine upload --verbose /opt/decord/wheels/decord*.whl || echo "Failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} decord2

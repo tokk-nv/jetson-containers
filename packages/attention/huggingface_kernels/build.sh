@@ -21,3 +21,5 @@ cd /opt/
 
 uv pip install /opt/huggingface_kernels/wheels/kernels*.whl
 twine upload --verbose /opt/huggingface_kernels/wheels/kernels*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} kernels

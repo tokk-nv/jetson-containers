@@ -24,3 +24,5 @@ cd /
 uv pip install /opt/sparge-attention/wheels/spas_sage_attn*.whl
 
 twine upload --verbose /opt/sparge-attention/wheels/spas_sage_attn*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} spas_sage_attn

@@ -53,3 +53,5 @@ uv pip install /opt/flash-attention/wheels/flash_attn*.whl
 #uv pip show flash-attn && python3 -c 'import flash_attn'
 
 twine upload --verbose /opt/flash-attention/wheels/flash_attn*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} flash-attn

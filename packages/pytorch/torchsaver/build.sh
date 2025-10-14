@@ -32,3 +32,5 @@ uv pip install /opt/torch_memory_saver*.whl
 uv pip show torch_memory_saver && python3 -c 'import torch_memory_saver'
 
 twine upload --verbose /opt/torch_memory_saver*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} torch-memory-saver

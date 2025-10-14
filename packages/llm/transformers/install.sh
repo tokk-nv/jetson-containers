@@ -31,3 +31,5 @@ if [ $(lsb_release -rs) = "20.04" ]; then
 	sed -i -e 's|torch.distributed.is_initialized|torch.distributed.is_available|g' \
 			${PYTHON_ROOT}/transformers/modeling_utils.py
 fi
+
+${PIP_APPEND_CONSTRAINT} transformers

@@ -31,3 +31,5 @@ uv pip install /opt/log-linear-attention/wheels/hattention*.whl
 #uv pip show flash-attn && python3 -c 'import flash_attn'
 
 twine upload --verbose /opt/log-linear-attention/wheels/hattention*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} hattention

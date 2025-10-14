@@ -8,3 +8,5 @@ fi
 
 uv pip install mamba_ssm==${MAMBA_VERSION} || \
 uv pip install mamba_ssm==${MAMBA_VERSION_SPEC}
+
+${PIP_APPEND_CONSTRAINT} mamba_ssm

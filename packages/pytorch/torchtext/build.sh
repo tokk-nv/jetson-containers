@@ -18,3 +18,5 @@ uv pip install /opt/torchtext*.whl
 uv pip show torchtext && python3 -c 'import torchtext; print(torchtext.__version__);'
 
 twine upload --verbose /opt/torchtext*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} torchtext

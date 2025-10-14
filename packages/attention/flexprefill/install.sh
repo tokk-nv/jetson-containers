@@ -7,3 +7,5 @@ if [ "$FORCE_BUILD" == "on" ]; then
 fi
 
 uv pip install flex_prefill==${FLEXPREFILL_VERSION}
+
+${PIP_APPEND_CONSTRAINT} flex_prefill

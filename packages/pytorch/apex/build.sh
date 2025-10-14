@@ -12,3 +12,5 @@ NVCC_APPEND_FLAGS="--threads 12" uv build --wheel . -v --disable-pip-version-che
 uv pip install /opt/apex/wheels/apex*.whl
 
 twine upload --verbose /opt/apex/wheels/apex*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} apex

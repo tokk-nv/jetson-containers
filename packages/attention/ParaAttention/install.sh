@@ -7,3 +7,5 @@ if [ "$FORCE_BUILD" == "on" ]; then
 fi
 
 uv pip install para-attn==${PARAATENTTION_VERSION}
+
+${PIP_APPEND_CONSTRAINT} para-attn

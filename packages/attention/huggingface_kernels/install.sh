@@ -8,3 +8,5 @@ fi
 
 uv pip install kernels==${KERNELS_VERSION}
 uv pip show kernels && python3 -c 'import kernels'
+
+${PIP_APPEND_CONSTRAINT} kernels

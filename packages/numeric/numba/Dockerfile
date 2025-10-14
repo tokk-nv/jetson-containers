@@ -19,4 +19,5 @@ RUN apt-get update && \
 #RUN llvm-config --version
 
 RUN uv pip install numba && \
-    uv pip show numba && python3 -c 'import numba; print(numba.__version__)'
+    uv pip show numba && python3 -c 'import numba; print(numba.__version__)' && \
+    ${PIP_APPEND_CONSTRAINT} numba

@@ -41,3 +41,6 @@ uv build --wheel --out-dir /opt/tvm/wheels .
 uv pip install /opt/tvm/wheels/tvm-*.whl
 
 twine upload --verbose dist/tvm-*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} apache-tvm
+${PIP_APPEND_CONSTRAINT} tvm

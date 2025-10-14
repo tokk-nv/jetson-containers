@@ -10,3 +10,5 @@ uv pip install flashinfer-python==${FLASHINFER_VERSION} || \
 uv pip install flashinfer-python==${FLASHINFER_VERSION_SPEC}
 
 uv pip show flashinfer_python && python3 -c 'import flashinfer'
+
+${PIP_APPEND_CONSTRAINT} flashinfer-python

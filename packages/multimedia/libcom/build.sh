@@ -29,3 +29,5 @@ uv pip install /opt/libcom/wheels/libcom*.whl
 
 # Optionally upload to a repository using Twine
 twine upload --verbose /opt/libcom/wheels/libcom*.whl || echo "Failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} libcom

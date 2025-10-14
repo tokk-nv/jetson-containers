@@ -8,6 +8,7 @@ ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
 ARG PYTHON_VERSION \
+    PIP_CONSTRAINT_PATH \
     TMP=/tmp/python
 
 ENV PYTHON_VERSION=${PYTHON_VERSION} \
@@ -25,9 +26,17 @@ ENV PYTHON_VERSION=${PYTHON_VERSION} \
     TWINE_NON_INTERACTIVE=1 \
     DEBIAN_FRONTEND=noninteractive \
     PATH=/opt/venv/bin:$PATH \
+    PIP_CONSTRAINT=${PIP_CONSTRAINT_PATH} \
+    UV_CONSTRAINT=${PIP_CONSTRAINT_PATH} \
+    UV_BUILD_CONSTRAINT=${PIP_CONSTRAINT_PATH} \
+    PIP_APPEND_CONSTRAINT=${TMP}/pip-append-constraint.sh \
     UV_PYTHON=/opt/venv/bin/python
 
-#PYTHONPATH=/opt/venv/lib/python${PYTHON_VERSION_ARG}/site-packages:/usr/lib/python3/dist-packages:$PYTHONPATH \
+# uv constraints are not 100% aligned with pip, sow we need to set
+# UV_CONSTRAINT and UV_BUILD_CONSTRAINT: https://docs.astral.sh/uv/pip/compatibility/#build-constraints
+# Usage:
+# ${PIP_APPEND_CONSTRAINT} <pip-pkg-name>
 
-COPY install.sh $TMP/
+COPY *.sh $TMP/
+
 RUN $TMP/install.sh

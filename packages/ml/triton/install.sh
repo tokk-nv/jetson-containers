@@ -8,3 +8,5 @@ if [ "$FORCE_BUILD" == "on" ]; then
 fi
 
 uv pip install triton==${TRITON_VERSION}
+
+${PIP_APPEND_CONSTRAINT} triton

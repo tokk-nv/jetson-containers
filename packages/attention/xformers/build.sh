@@ -33,3 +33,5 @@ python3 setup.py --verbose bdist_wheel --dist-dir /opt/xformers/wheels
 uv pip install /opt/xformers/wheels/*.whl
 
 twine upload --verbose /opt/xformers/wheels/xformers*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} xformers

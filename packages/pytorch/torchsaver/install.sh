@@ -8,3 +8,5 @@ fi
 
 uv pip install torch-memory-saver==${TORCH_MEMORY_SAVER_VERSION} || \
 uv pip install --pre "torch-memory-saver>=${TORCH_MEMORY_SAVER_VERSION}.dev,<=${TORCH_MEMORY_SAVER_VERSION}"
+
+${PIP_APPEND_CONSTRAINT} torch-memory-saver

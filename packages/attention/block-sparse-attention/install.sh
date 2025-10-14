@@ -7,3 +7,5 @@ if [ "$FORCE_BUILD" == "on" ]; then
 fi
 
 uv pip install block_sparse_attn==${BLOCKSPARSEATTN_VERSION}
+
+${PIP_APPEND_CONSTRAINT} block_sparse_attn

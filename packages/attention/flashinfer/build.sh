@@ -45,3 +45,5 @@ python3 -m build --no-isolation --wheel
 python3 -m pip install dist/flashinfer_python-*.whl
 
 twine upload --verbose dist/flashinfer_python-*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} flashinfer-python

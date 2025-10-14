@@ -21,6 +21,10 @@ if [ $(vercmp $CUDA_PYTHON_VERSION "12.6") -gt 0 ]; then
   # Build cuda_bindings wheel
   cd $SRC/cuda_bindings
   uv build --wheel . --no-deps --out-dir $WHL --verbose
+
+
+  ${PIP_APPEND_CONSTRAINT} cuda_core
+  ${PIP_APPEND_CONSTRAINT} cuda_bindings
 else
   cd $SRC
 
@@ -29,6 +33,10 @@ else
 
   uv pip install -r requirements.txt
   python3 setup.py bdist_wheel --verbose --dist-dir $WHL
+
+  pip3 install $WHL/cuda*.whl
+
+  ${PIP_APPEND_CONSTRAINT} cuda-python
 fi
 
 cd /
@@ -36,6 +44,9 @@ rm -rf $SRC
 
 uv pip install $WHL/cuda*.whl
 twine upload --verbose $WHL/cuda*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} cuda_core
+${PIP_APPEND_CONSTRAINT} cuda_bindings
 
 python3 -c 'import cuda'
 uv pip show cuda_core cuda_bindings || uv pip show cuda-python

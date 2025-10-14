@@ -7,3 +7,5 @@ if [ "$FORCE_BUILD" == "on" ]; then
 fi
 
 uv pip install libcom==${LIBCOM_VERSION}
+
+${PIP_APPEND_CONSTRAINT} libcom

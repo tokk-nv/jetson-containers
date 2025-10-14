@@ -19,3 +19,5 @@ uv pip install /opt/pycuda*.whl
 uv pip show pycuda && python3 -c 'import pycuda; print(pycuda.VERSION_TEXT)'
 
 twine upload --verbose /opt/pycuda*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} pycuda

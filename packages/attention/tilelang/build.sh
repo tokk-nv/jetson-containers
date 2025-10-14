@@ -49,3 +49,5 @@ cd /
 uv pip install /opt/tilelang/wheels/tilelang*.whl
 
 twine upload --verbose /opt/tilelang/wheels/tilelang*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} tilelang

@@ -23,3 +23,5 @@ pip3 wheel --wheel-dir=$REPO_DIR/wheels --verbose .
 pip3 install /opt/cuda_cccl/wheels/cuda_cccl-*.whl
 
 twine upload --verbose /opt/cuda_cccl/wheels/cuda_cccl-*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} cuda-cccl

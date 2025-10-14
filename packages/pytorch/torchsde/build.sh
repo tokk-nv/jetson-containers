@@ -16,3 +16,5 @@ uv pip install /opt/torchsde/wheels/torchsde*.whl
 uv pip show torchsde && python3 -c 'import torchsde; print(torchsde.__version__);'
 
 twine upload --verbose /opt/torchsde/wheels/torchsde*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} torchsde

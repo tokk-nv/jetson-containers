@@ -19,3 +19,5 @@ cd /opt/mamba
 
 # Optionally upload to a repository using Twine
 twine upload --verbose /opt/mamba/wheels/cobra*.whl || echo "Failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} cobra

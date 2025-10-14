@@ -8,3 +8,5 @@ fi
 
 uv pip install tilelang==${TILELANG_VERSION}
 uv pip show tilelang && python3 -c 'import tilelang'
+
+${PIP_APPEND_CONSTRAINT} tilelang

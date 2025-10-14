@@ -57,3 +57,5 @@ uv pip show torchcodec && python3 -c 'import torchcodec; print(torchcodec.__vers
 
 # --- Upload (if configured) ---
 twine upload --verbose /opt/torchcodec*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} torchcodec

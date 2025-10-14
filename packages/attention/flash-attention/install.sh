@@ -8,3 +8,5 @@ fi
 
 uv pip install flash-attn==${FLASH_ATTENTION_VERSION}
 uv pip show flash-attn && python3 -c 'import flash_attn'
+
+${PIP_APPEND_CONSTRAINT} flash-attn

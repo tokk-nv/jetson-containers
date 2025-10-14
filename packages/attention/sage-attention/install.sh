@@ -8,3 +8,5 @@ fi
 
 uv pip install sageattention==${SAGE_ATTENTION_VERSION}
 uv pip show sageattention && python3 -c 'from sageattention import sageattn'
+
+${PIP_APPEND_CONSTRAINT} sageattention

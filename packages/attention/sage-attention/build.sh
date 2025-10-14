@@ -22,3 +22,5 @@ cd /
 uv pip install /opt/sage-attention/wheels/sageattention*.whl
 
 twine upload --verbose /opt/sage-attention/wheels/sage-attention*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} sageattention

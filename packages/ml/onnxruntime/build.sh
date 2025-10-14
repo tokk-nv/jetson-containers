@@ -58,3 +58,5 @@ cd ${install_dir}
 cp -r * /usr/local/
 ls
 #rm -rf /tmp/onnxruntime
+
+${PIP_APPEND_CONSTRAINT} onnxruntime-gpu

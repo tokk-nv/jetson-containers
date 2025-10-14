@@ -18,3 +18,5 @@ uv pip install /opt/torchvision*.whl
 uv pip show torchvision && python3 -c 'import torchvision; print(torchvision.__version__);'
 
 twine upload --verbose /opt/torchvision*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} torchvision

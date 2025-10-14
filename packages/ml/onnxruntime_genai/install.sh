@@ -9,3 +9,5 @@ fi
 uv pip install onnxruntime_genai==${ONNXRUNTIME_GENAI_VERSION}
 
 python3 -c 'import onnxruntime_genai; print(onnxruntime_genai.__version__);'
+
+${PIP_APPEND_CONSTRAINT} onnxruntime_genai

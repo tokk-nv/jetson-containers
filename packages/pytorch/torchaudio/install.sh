@@ -12,3 +12,6 @@ fi
 
 uv pip install torchaudio~=${TORCHAUDIO_VERSION} || \
 uv pip install --pre "torchaudio>=${TORCHAUDIO_VERSION}.dev,<=${TORCHAUDIO_VERSION}"
+
+${PIP_APPEND_CONSTRAINT} torchaudio
+

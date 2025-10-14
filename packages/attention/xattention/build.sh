@@ -23,3 +23,5 @@ uv build --wheel --out-dir /opt/xattention/wheels --verbose .
 # uv pip install /opt/xattention/wheels/xattn*.whl
 uv pip install -e .
 twine upload --verbose /opt/xattention/wheels/xattn*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} xattn

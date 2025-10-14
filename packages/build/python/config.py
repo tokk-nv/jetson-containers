@@ -5,7 +5,10 @@ def python(version, requires=None) -> list:
     pkg = package.copy()
 
     pkg['name'] = f'python:{version}'
-    pkg['build_args'] = {'PYTHON_VERSION': version}
+    pkg['build_args'] = {
+        'PYTHON_VERSION': version,
+        'PIP_CONSTRAINT_PATH': '/opt/jetson-containers/pip-constraints.txt',
+    }
 
     if Version(version) == PYTHON_VERSION:
         pkg['alias'] = 'python'

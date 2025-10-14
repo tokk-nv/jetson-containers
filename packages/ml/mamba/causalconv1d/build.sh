@@ -24,3 +24,5 @@ cd /opt/causalconv1d
 
 # Optionally upload to a repository using Twine
 twine upload --verbose /opt/causalconv1d/wheels/causal_conv1d*.whl || echo "Failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} causal_conv1d

@@ -13,3 +13,5 @@ if [ "$(lsb_release -rs)" = "20.04" ]; then
     # https://github.com/conda/conda/issues/13619
     uv pip install pyopenssl==24.0.0
 fi
+
+${PIP_APPEND_CONSTRAINT} torchvision

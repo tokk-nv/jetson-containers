@@ -14,3 +14,5 @@ uv pip install /opt/cupy/wheels/*.whl
 uv pip show cupy && python3 -c 'import cupy; print(cupy.show_config())'
 
 twine upload --verbose /opt/cupy/wheels/*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} cupy

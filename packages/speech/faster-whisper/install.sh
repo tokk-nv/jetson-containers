@@ -13,3 +13,5 @@ uv pip install faster_whisper==${FASTER_WHISPER_VERSION}
 
 uv pip show faster_whisper
 python3 -c 'import faster_whisper; print(faster_whisper.__version__);'
+
+${PIP_APPEND_CONSTRAINT} faster_whisper

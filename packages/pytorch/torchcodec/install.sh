@@ -12,3 +12,5 @@ fi
 
 uv pip install torchcodec~=${TORCHCODEC_VERSION} || \
 uv pip install --pre "torchcodec>=${TORCHCODEC_VERSION}.dev,<=${TORCHCODEC_VERSION}"
+
+${PIP_APPEND_CONSTRAINT} torchcodec

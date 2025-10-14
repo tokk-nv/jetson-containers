@@ -10,3 +10,5 @@ tarpack install onnxruntime-gpu-${ONNXRUNTIME_VERSION}
 uv pip install onnxruntime-gpu==${ONNXRUNTIME_VERSION}
 
 python3 -c 'import onnxruntime; print(onnxruntime.__version__);'
+
+${PIP_APPEND_CONSTRAINT} onnxruntime-gpu

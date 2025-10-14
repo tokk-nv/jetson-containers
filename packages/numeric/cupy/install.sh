@@ -7,3 +7,5 @@ if [ "$FORCE_BUILD" == "on" ]; then
 fi
 
 uv pip install cupy==${CUPY_VERSION}
+
+${PIP_APPEND_CONSTRAINT} cupy

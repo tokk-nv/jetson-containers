@@ -75,3 +75,5 @@ python3 -c 'import torch; \
     print(f"cuDNN version  : {torch.backends.cudnn.version()}");'
 # PyTorch C++ extensions frequently use ninja parallel builds
 uv pip install scikit-build ninja
+
+${PIP_APPEND_CONSTRAINT} torch

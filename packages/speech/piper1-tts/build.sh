@@ -35,3 +35,5 @@ uv pip show piper-tts
 
 # upload wheels
 twine upload --verbose ${PIP_WHEEL_DIR}/piper_tts*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+${PIP_APPEND_CONSTRAINT} piper-tts
