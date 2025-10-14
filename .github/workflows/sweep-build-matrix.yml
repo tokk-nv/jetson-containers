@@ -113,28 +113,28 @@ jobs:
         run: |
           echo "event_name=${{ github.event_name }}"
           echo "subset_mode='${{ github.event.inputs.subset_mode || 'list' }}'"
-          echo "subset_value='${{ github.event.inputs.subset_value || 'build-essential' }}'"
+          echo "subset_value='${{ github.event.inputs.subset_value || 'vllm,sglang,ollama,llama_cpp,mlc,piper1-tts,faster-whisper,sound-utils,ros:humble-desktop' }}'"
           echo "exclude_builders='${{ github.event.inputs.exclude_builders || 'true' }}'"
           echo "use_cache='${{ github.event.inputs.use_cache || 'false' }}'"
           echo "chunk_size='${{ github.event.inputs.chunk_size || 'auto' }}'"
           echo "target_chunks_small='${{ github.event.inputs.target_chunks_small || '20' }}'"
           echo "max_packages_per_chunk='${{ github.event.inputs.max_packages_per_chunk || '5' }}'"
-          echo "max_parallel='${{ github.event.inputs.max_parallel || '32' }}'"
-          echo "pkg_timeout_minutes='${{ github.event.inputs.pkg_timeout_minutes || '30' }}'"
+          echo "max_parallel='${{ github.event.inputs.max_parallel || '64' }}'"
+          echo "pkg_timeout_minutes='${{ github.event.inputs.pkg_timeout_minutes || '120' }}'"
           echo "resolved_platforms=${{ steps.set.outputs.platforms }}"
 
           echo "## ▶️ Workflow Inputs" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- **event_name**: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **subset_mode**: '${{ github.event.inputs.subset_mode || 'list' }}'" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **subset_value**: '${{ github.event.inputs.subset_value || 'build-essential' }}'" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **subset_value**: '${{ github.event.inputs.subset_value || 'vllm,sglang,ollama,llama_cpp,mlc,piper1-tts,faster-whisper,sound-utils,ros:humble-desktop' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **exclude_builders**: '${{ github.event.inputs.exclude_builders || 'true' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **use_cache**: '${{ github.event.inputs.use_cache || 'false' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **chunk_size**: '${{ github.event.inputs.chunk_size || 'auto' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **target_chunks_small**: '${{ github.event.inputs.target_chunks_small || '20' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **max_packages_per_chunk**: '${{ github.event.inputs.max_packages_per_chunk || '5' }}'" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **max_parallel**: '${{ github.event.inputs.max_parallel || '32' }}'" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **pkg_timeout_minutes**: '${{ github.event.inputs.pkg_timeout_minutes || '30' }}'" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **max_parallel**: '${{ github.event.inputs.max_parallel || '64' }}'" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **pkg_timeout_minutes**: '${{ github.event.inputs.pkg_timeout_minutes || '120' }}'" >> "$GITHUB_STEP_SUMMARY"
           echo "- **platforms (resolved)**: ${{ steps.set.outputs.platforms }}" >> "$GITHUB_STEP_SUMMARY"
 
   discover:
@@ -343,7 +343,8 @@ jobs:
           # Provide sensible defaults for non-"all" modes when value is empty
           if not value and mode != "all":
               if mode == "list":
-                  value = "build-essential"  # Keep existing behavior for list mode
+                  # Priority list for automatic push builds (uses latest versions except ROS)
+                  value = "vllm,sglang,ollama,llama_cpp,mlc,piper1-tts,faster-whisper,sound-utils,ros:humble-desktop"
               elif mode == "first_n" or mode == "sample_n":
                   value = "10"  # Default to 10 packages
               # For prefix/regex modes, empty value will result in no filtering (which is fine)
