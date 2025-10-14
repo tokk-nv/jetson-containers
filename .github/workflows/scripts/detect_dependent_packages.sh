@@ -14,7 +14,7 @@ set -euo pipefail
 # For push events: uses the last commit (typically a squash merge)
 
 BASE_REF_ENV=${BASE_REF:-}
-DEFAULT_PACKAGE="build-essential"
+DEFAULT_PACKAGE="cudastack"
 EVENT_NAME=${GITHUB_EVENT_NAME:-}
 
 if [[ -z "$BASE_REF_ENV" ]]; then
