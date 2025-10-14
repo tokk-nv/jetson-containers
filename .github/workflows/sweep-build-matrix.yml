@@ -718,13 +718,13 @@ jobs:
     if: ${{ fromJson(needs.plan.outputs.include) && (needs.plan.outputs.include != '[]') }}
     strategy:
       fail-fast: false
-      max-parallel: ${{ fromJSON(github.event.inputs.max_parallel || '32') }}
+      max-parallel: ${{ fromJSON(github.event.inputs.max_parallel || '64') }}
       matrix:
         include: ${{ fromJson(needs.plan.outputs.include) }}
     runs-on:
       - self-hosted
       - ${{ matrix.platform }}
-    timeout-minutes: ${{ fromJSON(inputs.pkg_timeout_minutes) }}  # package timeout = job timeout
+    timeout-minutes: ${{ fromJSON(github.event.inputs.pkg_timeout_minutes || '120') }}  # package timeout = job timeout
     steps:
       - name: Print runner info
         run: |
