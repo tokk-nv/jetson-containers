@@ -52,6 +52,7 @@ jobs:
         id: discover
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
           bash .github/workflows/scripts/detect_dependent_packages.sh | tee /dev/stderr
 

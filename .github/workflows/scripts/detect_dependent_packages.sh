@@ -4,14 +4,18 @@ set -euo pipefail
 
 # Inputs:
 #   BASE_REF  - base branch name (e.g., 'dev') for PR diff (optional)
+#   GITHUB_EVENT_NAME - GitHub event type (pull_request, push, workflow_dispatch, etc.)
 # Outputs:
 #   Writes a JSON array of package names to $GITHUB_OUTPUT as 'packages', if available.
 #   Also echoes the JSON to stdout for debugging.
 #
 # This script detects changed packages and adds vllm/sglang if any of their dependencies were touched.
+# For PRs: compares against base branch
+# For push events: uses the last commit (typically a squash merge)
 
 BASE_REF_ENV=${BASE_REF:-}
 DEFAULT_PACKAGE="build-essential"
+EVENT_NAME=${GITHUB_EVENT_NAME:-}
 
 if [[ -z "$BASE_REF_ENV" ]]; then
   json='[]'
@@ -22,7 +26,18 @@ if [[ -z "$BASE_REF_ENV" ]]; then
   exit 0
 fi
 
-git fetch --no-tags --prune origin "$BASE_REF_ENV"
+# Determine if this is a push event (merge) or a PR
+if [[ "$EVENT_NAME" == "push" ]]; then
+  IS_PUSH_EVENT=true
+  echo "Detected push event - will use last commit for changes" >&2
+else
+  IS_PUSH_EVENT=false
+  echo "Detected PR or other event - will compare against base branch" >&2
+fi
+
+if ! $IS_PUSH_EVENT; then
+  git fetch --no-tags --prune origin "$BASE_REF_ENV"
+fi
 
 # Function to extract dependencies from a Dockerfile
 # Usage: get_dependencies <package_name>
@@ -109,10 +124,19 @@ get_all_dependencies() {
 }
 
 # Check if there are any changes to fundamental files
-mapfile -t fundamental_changes < <(
-  git diff --name-only "origin/${BASE_REF_ENV}"...HEAD \
-    | grep -E '^(jetson_containers/.*\.py$|\.github/workflows/|[^/]+\.sh$|pyproject\.toml$|requirements\.txt$|jetson-containers$)' || true
-)
+if $IS_PUSH_EVENT; then
+  # For push events, use the last commit (squash merge)
+  mapfile -t fundamental_changes < <(
+    git diff --name-only HEAD~1 HEAD \
+      | grep -E '^(jetson_containers/.*\.py$|\.github/workflows/|[^/]+\.sh$|pyproject\.toml$|requirements\.txt$|jetson-containers$)' || true
+  )
+else
+  # For PR events, compare against base branch
+  mapfile -t fundamental_changes < <(
+    git diff --name-only "origin/${BASE_REF_ENV}"...HEAD \
+      | grep -E '^(jetson_containers/.*\.py$|\.github/workflows/|[^/]+\.sh$|pyproject\.toml$|requirements\.txt$|jetson-containers$)' || true
+  )
+fi
 
 # Function to get package name from Dockerfile
 # Usage: get_package_name <folder_path>
@@ -150,11 +174,21 @@ get_package_name() {
 }
 
 # Get all changed package folders
-mapfile -t candidates < <(
-  git diff --name-only "origin/${BASE_REF_ENV}"...HEAD \
-    | awk -F/ '$1=="packages" { if (NF>=3) print $3; else if (NF==2) print $2 }' \
-    | sort -u
-)
+if $IS_PUSH_EVENT; then
+  # For push events, use the last commit (squash merge)
+  mapfile -t candidates < <(
+    git diff --name-only HEAD~1 HEAD \
+      | awk -F/ '$1=="packages" { if (NF>=3) print $3; else if (NF==2) print $2 }' \
+      | sort -u
+  )
+else
+  # For PR events, compare against base branch
+  mapfile -t candidates < <(
+    git diff --name-only "origin/${BASE_REF_ENV}"...HEAD \
+      | awk -F/ '$1=="packages" { if (NF>=3) print $3; else if (NF==2) print $2 }' \
+      | sort -u
+  )
+fi
 
 packages=()
 for p in "${candidates[@]}"; do
