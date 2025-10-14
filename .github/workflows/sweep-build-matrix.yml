@@ -40,7 +40,7 @@ on:
       max_parallel:
         description: "Max parallel jobs across ALL platforms"
         required: false
-        default: "32"
+        default: "64"
       pkg_timeout_minutes:
         description: "Per-package timeout (minutes)"
         required: false
@@ -1493,6 +1493,11 @@ jobs:
     # This job should always succeed to ensure the workflow completes successfully
     # even if some matrix jobs timeout or fail
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
       - name: Download all chunk artifacts
         uses: actions/download-artifact@v4
         with:
@@ -1520,6 +1525,8 @@ jobs:
           find _in -name "results-*-chunk-*-${{ github.run_attempt }}" | sort || echo "No files match the exact pattern"
 
       - name: Merge JSON
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           sudo apt-get update && sudo apt-get install -y jq
 
