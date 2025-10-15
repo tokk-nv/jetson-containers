@@ -23,9 +23,23 @@ if [ -n "${DIFFUSERS_COMMIT}" ]; then
 elif [ -n "${DIFFUSERS_VERSION}" ]; then
     # Branch or tag name specified
     echo "Building from ${DIFFUSERS_VERSION}"
-    # Try to clone with specific branch/tag (works for both), fallback to main if not found
-    git clone --branch=${DIFFUSERS_VERSION} --depth=1 --recursive https://github.com/huggingface/diffusers /opt/diffusers || \
-    git clone --recursive https://github.com/huggingface/diffusers /opt/diffusers
+
+    # Try to clone with specific branch/tag
+    if ! git clone --branch=${DIFFUSERS_VERSION} --depth=1 --recursive https://github.com/huggingface/diffusers /opt/diffusers; then
+        echo "ERROR: Failed to checkout '${DIFFUSERS_VERSION}'"
+        echo "This could mean:"
+        echo "  - Tag/branch '${DIFFUSERS_VERSION}' does not exist in upstream"
+        echo "  - Network/connectivity issue"
+        echo ""
+        echo "If you want to use a specific commit instead, use the format:"
+        echo "  diffusers('0.35.1+<commit_hash>')"
+        echo ""
+        echo "Available options:"
+        echo "  - Use an existing tag (check https://github.com/huggingface/diffusers/releases)"
+        echo "  - Use commit pinning: diffusers('0.35.1+abc1234')"
+        echo "  - Use a branch name: diffusers('main')"
+        exit 1
+    fi
 else
     # Default: clone main branch
     echo "No version specified, cloning main branch"

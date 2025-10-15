@@ -5,9 +5,9 @@
 | Format | Example | When to Use |
 |--------|---------|-------------|
 | **Branch** | `'main'` | Testing bleeding edge (⚠️ can break) |
-| **Tag** | `'v0.35.1'` | Stable release |
+| **Tag** | `'0.35.1'` | Stable release (NO 'v' prefix) |
 | **Commit** | `'3eb4078'` | Pin to specific state |
-| **Tag+Commit** | `'v0.35.1+0f252be'` | ⭐ **RECOMMENDED**: Stable + needed fixes |
+| **Tag+Commit** | `'0.35.1+0f252be'` | ⭐ **RECOMMENDED**: Stable + needed fixes |
 
 ## Common Workflows
 
@@ -33,25 +33,25 @@ git log -1 --format=%h main
 #### Production (Stable + Safe)
 ```python
 package = [
-    diffusers('v0.35.1+0f252be', default=True),  # Pinned to known good commit
+    diffusers('0.35.1+0f252be', default=True),  # Pinned to known good commit
 ]
 ```
 
 #### Development (Testing + Stable Fallback)
 ```python
 package = [
-    diffusers('v0.35.1+0f252be', default=True),  # Stable default
-    diffusers('main', default=False),             # Test main separately
+    diffusers('0.35.1+0f252be', default=True),  # Stable default
+    diffusers('main', default=False),            # Test main separately
 ]
 ```
 
 #### Multi-Version Testing
 ```python
 package = [
-    diffusers('v0.35.1', default=False),          # Previous release
-    diffusers('v0.35.1+abc1234', default=True),   # Stable with fixes
-    diffusers('v0.36.0', default=False),          # Next release
-    diffusers('main', default=False),             # Bleeding edge
+    diffusers('0.35.1', default=False),          # Previous release
+    diffusers('0.35.1+abc1234', default=True),   # Stable with fixes
+    diffusers('0.36.0', default=False),          # Next release (when available)
+    diffusers('main', default=False),            # Bleeding edge
 ]
 ```
 
@@ -60,18 +60,18 @@ package = [
 | Version String | DIFFUSERS_VERSION | DIFFUSERS_COMMIT |
 |----------------|-------------------|------------------|
 | `'main'` | *(not set)* | *(not set)* |
-| `'v0.35.1'` | `v0.35.1` | *(not set)* |
+| `'0.35.1'` | `v0.35.1` | *(not set)* |
 | `'3eb4078'` | *(not set)* | `3eb4078` |
-| `'v0.35.1+3eb4078'` | `v0.35.1` | `3eb4078` |
+| `'0.35.1+3eb4078'` | `v0.35.1` | `3eb4078` |
 
 ## What Gets Checked Out
 
 | Build Args | Git Command |
 |------------|-------------|
 | None | `git clone` → main branch |
-| `VERSION=v0.35.1` | `git clone --branch=v0.35.1` |
+| `VERSION=v0.35.1` | `git clone --branch=v0.35.1` (auto-adds 'v') |
 | `COMMIT=3eb4078` | `git clone && git checkout 3eb4078` |
-| Both | `git clone && git checkout 3eb4078` |
+| Both | `git clone && git checkout 3eb4078` (commit wins) |
 
 ## Migration Checklist
 
@@ -98,12 +98,31 @@ package = [
 package = [
     # Pinned to commit after v0.35.1 that adds Qwen-Image-Edit improvements
     # See: https://github.com/huggingface/diffusers/pull/12188
-    diffusers('v0.35.1+0f252be', default=True),
+    diffusers('0.35.1+0f252be', default=True),
 
     # Track main for CI testing
     diffusers('main', default=False),
 ]
 ```
+
+## Version Format Convention
+
+**✅ Recommended** (NO 'v' prefix):
+```python
+diffusers('0.35.1')           # Version tag
+diffusers('0.35.1+abc1234')   # Version + commit
+```
+
+**⚠️ Accepted but NOT recommended** ('v' prefix):
+```python
+diffusers('v0.35.1')          # Works, but inconsistent with JC convention
+diffusers('v0.35.1+abc1234')  # Works, but inconsistent with JC convention
+```
+
+**Why no 'v'?**
+- Matches PyPI: `pip install diffusers==0.35.1`
+- Consistent with other JC packages (vllm, habitat-sim)
+- Config.py adds 'v' automatically for git operations
 
 ## Common Patterns
 

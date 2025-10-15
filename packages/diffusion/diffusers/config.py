@@ -76,15 +76,16 @@ def _is_version_number(s):
 package = [
     # Version format examples (WITHOUT 'v' prefix - added automatically):
     #  - Branch:         'main', 'release-tests', 'nightly-fix'
-    #  - Version tag:    '0.35.1', '0.36.0' (automatically becomes 'v0.35.1', 'v0.36.0' for git)
+    #  - Version tag:    '0.35.1' (automatically becomes 'v0.35.1' for git)
+    #                    ⚠️  Only use tags that exist! Non-existent tags will FAIL (no silent fallback)
     #  - Commit hash:    '3eb4078', 'a4bc8454783dbae3be9cf840f074b961a558aba5'
     #  - Version+commit: '0.35.1+a4bc845' (version for context, commit for stability) ⭐ RECOMMENDED
 
-    diffusers('0.36.0', default=False),
-    diffusers('main', default=True), # we force build main until the next diffusers release
+    #diffusers('0.35.1', default=False),
+    #diffusers('main', default=True), # we force build main until the next diffusers release
 
     # Example with commit pinning (uncomment when ready to use):
-    # diffusers('0.35.1+3eb4078', default=True),   # Pin to known-good commit
-    # diffusers('main', default=False),            # Keep for CI to track upstream changes
+    diffusers('0.35.1+3eb4078', default=True),   # Pin to known-good commit
+    diffusers('main', default=False),            # Track upstream main (non-default) to catch breakages early
 ]
 

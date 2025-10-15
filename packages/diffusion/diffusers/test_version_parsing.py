@@ -61,9 +61,9 @@ def test_version_parsing():
 
         # Verify results
         success = (base_version == expected_base and commit_hash == expected_commit)
-        status = "✓" if success else "✗"
+        status = "✅" if success else "❌"
         all_passed = all_passed and success
-
+        
         print(f"\n{status} {description}: '{version}'")
         print(f"  Parsed base:   {base_version!r} (expected: {expected_base!r})")
         print(f"  Parsed commit: {commit_hash!r} (expected: {expected_commit!r})")
@@ -87,10 +87,10 @@ def test_version_parsing():
 
     print("\n" + "=" * 80)
     if all_passed:
-        print("✓ All tests passed!")
+        print("✅ All tests passed!")
         return 0
     else:
-        print("✗ Some tests failed!")
+        print("❌ Some tests failed!")
         return 1
 
 if __name__ == '__main__':

@@ -15,12 +15,16 @@ diffusers('release-tests', default=False)
 - **Risk**: Upstream changes can break your build
 - **Use case**: Tracking bleeding-edge development or testing branches
 
-### 2. Tag Name (e.g., `'v0.35.1'`)
+### 2. Tag Name (e.g., `'0.35.1'`)
 ```python
-diffusers('v0.35.1', default=True)
+diffusers('0.35.1', default=True)  # Recommended - follows jetson-containers convention
+# diffusers('v0.35.1', default=True)  # Also works but not recommended
 ```
 - Checks out a specific release tag from the upstream repo
-- **Note**: Include the 'v' prefix as used in the upstream GitHub releases
+- **Convention**: Specify WITHOUT 'v' prefix (e.g., `'0.35.1'` not `'v0.35.1'`)
+  - Matches PyPI version format: `pip install diffusers==0.35.1`
+  - Consistent with other jetson-containers packages (vllm, habitat-sim)
+  - Config automatically adds 'v' for git operations
 - Stable and reproducible
 - **Use case**: Building from a stable release
 
@@ -33,12 +37,14 @@ diffusers('a4bc8454783dbae3be9cf840f074b961a558aba5', default=True)
 - Most stable: guaranteed not to change
 - **Use case**: When you need a specific state of the codebase
 
-### 4. Tag + Commit Hash (e.g., `'v0.35.1+0f252be'`)
+### 4. Tag + Commit Hash (e.g., `'0.35.1+0f252be'`) ⭐ **RECOMMENDED**
 ```python
-diffusers('v0.35.1+0f252be', default=True)
+diffusers('0.35.1+0f252be', default=True)  # Recommended format
+# diffusers('v0.35.1+0f252be', default=True)  # Also works
 ```
 - Checks out the specific commit, with tag providing context
 - Best of both worlds: reference a version for context + pin to exact commit
+- **Convention**: Use version WITHOUT 'v' prefix (e.g., `'0.35.1+abc1234'`)
 - **Use case**: When you need features/fixes that came after a release but before the next one
 - **Recommended**: This is the safest way to track post-release commits while documenting context
 
@@ -50,7 +56,8 @@ View all branches at: https://github.com/huggingface/diffusers/branches
 
 ### Tags (Releases)
 View all releases at: https://github.com/huggingface/diffusers/releases
-- Tags include the 'v' prefix: `v0.35.1`, `v0.36.0`, etc.
+- GitHub tags include the 'v' prefix: `v0.35.1`, `v0.36.0`, etc.
+- **In config.py, specify WITHOUT 'v'**: `diffusers('0.35.1')` not `diffusers('v0.35.1')`
 - The latest stable release is shown at the top
 
 ### Commit Hashes
@@ -89,10 +96,10 @@ git rev-parse 3eb4078
 ```python
 package = [
     # Released version - stable but may be missing features
-    diffusers('v0.35.1', default=False),
+    diffusers('0.35.1', default=False),
 
     # Pinned to specific commit after v0.35.1 with needed fixes (RECOMMENDED)
-    diffusers('v0.35.1+0f252be', default=True),
+    diffusers('0.35.1+0f252be', default=True),
 
     # Direct commit hash - most explicit, no version context
     diffusers('3eb4078', default=False),
@@ -131,7 +138,7 @@ To migrate to commit pinning:
 
    **Option A: Tag + Commit (Recommended)**
    ```python
-   diffusers('v0.35.1+3eb4078', default=True)  # Provides version context
+   diffusers('0.35.1+3eb4078', default=True)  # Provides version context
    ```
 
    **Option B: Pure Commit**
@@ -153,23 +160,23 @@ When you want to update to a newer commit:
 1. Test the new commit first:
    ```python
    package = [
-       diffusers('v0.35.1+old_hash', default=True),
-       diffusers('v0.35.1+new_hash', default=False),  # Test this first
+       diffusers('0.35.1+old_hash', default=True),
+       diffusers('0.35.1+new_hash', default=False),  # Test this first
    ]
    ```
 
 2. After validation, swap the default:
    ```python
    package = [
-       diffusers('v0.35.1+old_hash', default=False),
-       diffusers('v0.35.1+new_hash', default=True),   # Now the default
+       diffusers('0.35.1+old_hash', default=False),
+       diffusers('0.35.1+new_hash', default=True),   # Now the default
    ]
    ```
 
 3. Eventually remove the old version:
    ```python
    package = [
-       diffusers('v0.35.1+new_hash', default=True),
+       diffusers('0.35.1+new_hash', default=True),
    ]
    ```
 
@@ -177,13 +184,14 @@ When you want to update to a newer commit:
 
 The system automatically detects which format you're using:
 
-1. **Contains '+'** → Split into tag+commit: `'v0.35.1+0f252be'` → tag=`v0.35.1`, commit=`0f252be`
-2. **Is hex (7-40 chars, no 'v' prefix)** → Treat as commit: `'3eb4078'` → commit=`3eb4078`
-3. **Otherwise** → Treat as branch/tag name: `'main'` or `'v0.35.1'` → use as branch/tag
+1. **Contains '+'** → Split into tag+commit: `'0.35.1+0f252be'` → version=`0.35.1`, commit=`0f252be`
+2. **Is hex (7-40 chars)** → Treat as commit: `'3eb4078'` → commit=`3eb4078`
+3. **Otherwise** → Treat as branch/tag name: `'main'` or `'0.35.1'` → use as branch/tag
 
 This means:
-- `'v0.35.1'` → Checks out tag v0.35.1
+- `'0.35.1'` → Adds 'v' prefix → Checks out tag v0.35.1
+- `'v0.35.1'` → Forgiving, also works → Checks out tag v0.35.1
 - `'0f252be'` → Checks out commit 0f252be (detected as hex)
 - `'main'` → Checks out main branch (not hex)
-- `'v0.35.1+0f252be'` → Checks out commit 0f252be (with v0.35.1 for context)
+- `'0.35.1+0f252be'` → Checks out commit 0f252be (with 0.35.1 for context)
 
